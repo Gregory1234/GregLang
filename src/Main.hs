@@ -1,4 +1,9 @@
 module Main where
 
+import GL.Args
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+  a <- getArgs
+  print a
+  return ()
