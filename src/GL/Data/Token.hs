@@ -72,6 +72,6 @@ instance Read Keyword where
 data LocToken = LocToken {
   tokenVal :: Token,
   tokenPos :: P.SourcePos,
-  tokenSpellingBefore :: String,
-  tokenSpellingDuring :: String
+  tokenSpellingDuring :: String,
+  tokenSpellingAfter :: String
 } deriving Show
