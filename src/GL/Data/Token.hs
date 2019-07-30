@@ -1,10 +1,24 @@
+{-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies #-}
+
 module GL.Data.Token where
 
 import Control.Monad
 import Data.Char
+import Data.Function
+import Data.List
+import qualified Data.List.HT as L
+import qualified Data.List.NonEmpty as NE
+import Data.List.Split
+import Data.Proxy
 import qualified Text.Megaparsec as P
 import qualified Text.ParserCombinators.ReadP as RP
 import Text.Read
+
+updatePosString :: P.SourcePos -> String -> P.SourcePos
+updatePosString p s =
+  let (x, y, z) =
+        P.reachOffset (length s) (P.PosState s 0 p P.defaultTabWidth "")
+   in x
 
 data Token
   = TBegin
@@ -14,6 +28,7 @@ data Token
   | TFloatLit Double
   | TCharLit Char
   | TKeyword Keyword
+  deriving (Eq, Ord)
 
 instance Show Token where
   show TBegin = "<begin>"
@@ -56,7 +71,7 @@ data Keyword
   | KBraceCl
   | KParenOp
   | KParenCl
-  deriving (Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded)
 
 instance Show Keyword where
   show KClass = "class"
@@ -84,4 +99,45 @@ data LocToken =
     , tokenSpellingDuring :: String
     , tokenSpellingAfter :: String
     }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
+
+recreateToken :: Int -> LocToken -> String
+recreateToken tw LocToken {..} =
+  L.replace "\t" (replicate tw ' ') (tokenSpellingDuring ++ tokenSpellingAfter)
+
+instance P.Stream [LocToken] where
+  type Token [LocToken] = LocToken
+  type Tokens [LocToken] = [LocToken]
+  tokenToChunk Proxy = pure
+  tokensToChunk Proxy = id
+  chunkToTokens Proxy = id
+  chunkLength Proxy = length
+  chunkEmpty Proxy = null
+  take1_ [] = Nothing
+  take1_ (t:ts) = Just (t, ts)
+  takeN_ n s
+    | n <= 0 = Just ([], s)
+    | null s = Nothing
+    | otherwise = Just (splitAt n s)
+  takeWhile_ = span
+  showTokens Proxy = intercalate ", " . NE.toList . fmap (show . tokenVal)
+  reachOffset o P.PosState {..} =
+    ( epos
+    , line
+    , P.PosState
+        { P.pstateInput = rest
+        , P.pstateOffset = max pstateOffset o
+        , P.pstateSourcePos = epos
+        , P.pstateTabWidth = pstateTabWidth
+        , P.pstateLinePrefix = pstateLinePrefix
+        })
+    where
+      ofDiff = o - pstateOffset
+      (tok, rest) = splitAt ofDiff pstateInput
+      epos =
+        updatePosString pstateSourcePos $
+        tok >>= recreateToken (P.unPos pstateTabWidth)
+      strs =
+        splitOn "\n" (pstateInput >>= recreateToken (P.unPos pstateTabWidth))
+      line = strs !! (min (length strs - 1) ind)
+      ind = (((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos)
