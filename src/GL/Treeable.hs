@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 module GL.Treeable where
 
 import Data.Tree
