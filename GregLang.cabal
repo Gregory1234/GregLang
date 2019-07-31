@@ -15,10 +15,25 @@ maintainer:          Gregory1234@users.noreply.github.com
 -- category:
 extra-source-files:  README.md
 
-executable GregLang
-  main-is:             Main.hs
-  other-modules:       GL.Args, GL.Data.Token, GL.Lexer, GL.Treeable, GL.Data.SyntaxTree, GL.Parser
+library
+  exposed-modules:     GL.Args, GL.Data.Token, GL.Lexer, GL.Utils, GL.Data.SyntaxTree, GL.Parser
+  -- other-modules:
   -- other-extensions:
   build-depends:       base ^>=4.12.0.0, parseargs, megaparsec, containers, utility-ht, split
   hs-source-dirs:      src
+  default-language:    Haskell2010
+
+executable GregLangCompiler
+  main-is:             Main.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base ^>=4.12.0.0, GregLang
+  default-language:    Haskell2010
+
+test-suite GregLangTests
+  type:               exitcode-stdio-1.0
+  main-is:            MainTest.hs
+  -- other-modules:
+  build-depends:      base ^>=4.12.0.0, QuickCheck, GregLang, megaparsec
+  hs-source-dirs:     test
   default-language:    Haskell2010

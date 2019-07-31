@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module GL.Treeable where
+module GL.Utils where
 
+import qualified Data.List.HT as L
 import Data.Tree
 
 class Treeable a where
@@ -15,3 +16,6 @@ instance Treeable String where
 
 treeShow :: Treeable a => a -> String
 treeShow = drawTree . toTree
+
+replaceTabs :: Int -> String -> String
+replaceTabs tw = L.replace "\t" (replicate tw ' ')

@@ -2,7 +2,7 @@ module GL.Data.SyntaxTree where
 
 import Data.List
 import Data.Tree
-import GL.Treeable
+import GL.Utils
 
 data AST =
   AST [GLImport] GLClass

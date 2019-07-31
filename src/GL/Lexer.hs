@@ -24,7 +24,17 @@ splitGreedyRead s = helper s ""
         (readMaybe s1)
 
 lexGregLang :: FilePath -> String -> Either String [LocToken]
-lexGregLang fn str = lexer str (P.initialPos fn)
+lexGregLang fn str = lexer' str (P.initialPos fn)
+
+lexer' :: String -> P.SourcePos -> Either String [LocToken]
+lexer' s p =
+  case lexer s p of
+    Left e -> Left e
+    Right [] -> Right [beg]
+    Right a@(LocToken TBegin _ _ _:_) -> Right a
+    Right a@(_:_) -> Right (beg : a)
+  where
+    beg = LocToken TBegin p "" ""
 
 lexer :: String -> P.SourcePos -> Either String [LocToken]
 lexer "" _ = Right []

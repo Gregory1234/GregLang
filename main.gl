@@ -2,5 +2,6 @@
 class Main
 
 main{
-
+  if 5 5 else 5
+  if 5 6
 }
