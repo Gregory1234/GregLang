@@ -35,4 +35,4 @@ getArgs = do
   return $
     Args
       (A.getRequiredArg a "in")
-      (fromMaybe ((A.getRequiredArg a "in") ++ ".o") (A.getArg a "out"))
+      (fromMaybe (A.getRequiredArg a "in" ++ ".o") (A.getArg a "out"))

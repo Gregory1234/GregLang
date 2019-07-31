@@ -29,7 +29,7 @@ braces = bracketAny (tokenKeyword "{") (tokenKeyword "}")
 
 tokenIdent :: Parser String
 tokenIdent =
-  P.label ("<ident>") $
+  P.label "<ident>" $
   tokenSatisfy
     (\case
        (TIdent s) -> Just s
@@ -54,7 +54,7 @@ statParser =
     [ (\a b -> maybe (SIf a b) (SIfElse a b)) <$>
       (tokenKeyword "if" *> exprParser) <*>
       statParser <*>
-      (P.optional (tokenKeyword "else" *> statParser))
+      P.optional (tokenKeyword "else" *> statParser)
     , SBraces <$> braces (P.many statParser)
     , SExpr <$> exprParser
     ]

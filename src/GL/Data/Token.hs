@@ -5,6 +5,7 @@ module GL.Data.Token where
 import Control.Monad
 import Data.Char
 import Data.Function
+import Data.Functor
 import Data.List
 import qualified Data.List.HT as L
 import qualified Data.List.NonEmpty as NE
@@ -54,7 +55,7 @@ instance Read Token where
       , TCharLit <$> readPrec
       , TIdent <$>
         lift
-          ((:) <$> (RP.satisfy (\x -> isAlpha x || x == '_')) <*>
+          ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*>
            RP.munch (\x -> isAlphaNum x || x == '_'))
       ]
 
@@ -90,7 +91,7 @@ instance Show Keyword where
 instance Read Keyword where
   readPrec =
     foldl1 (<++) $
-    map (\x -> lift (RP.string $ show x) *> return x) [minBound .. maxBound]
+    map (\x -> lift (RP.string $ show x) $> return x) [minBound .. maxBound]
 
 data LocToken =
   LocToken
@@ -139,5 +140,5 @@ instance P.Stream [LocToken] where
         tok >>= recreateToken (P.unPos pstateTabWidth)
       strs =
         splitOn "\n" (pstateInput >>= recreateToken (P.unPos pstateTabWidth))
-      line = strs !! (min (length strs - 1) ind)
-      ind = (((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos)
+      line = strs !! min (length strs - 1) ind
+      ind = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos

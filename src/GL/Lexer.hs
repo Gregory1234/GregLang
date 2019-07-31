@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module GL.Lexer
   ( lexGregLang
   ) where
@@ -22,7 +20,7 @@ splitGreedyRead s = helper s ""
     helper s1 s2 =
       maybe
         (helper (init s1) (last s1 : s2))
-        (\a -> fmap ((a, s1) :) $ splitGreedyRead s2)
+        (\a -> ((a, s1) :) <$> splitGreedyRead s2)
         (readMaybe s1)
 
 lexGregLang :: FilePath -> String -> Either String [LocToken]
@@ -31,7 +29,7 @@ lexGregLang fn str = lexer str (P.initialPos fn)
 lexer :: String -> P.SourcePos -> Either String [LocToken]
 lexer "" _ = Right []
 lexer s p = do
-  let (ds, nds) = span (not . isSpace) s
+  let (ds, nds) = break isSpace s
   let (as, s') = span isSpace nds
   ws <-
     maybeToEither (show ds) $
@@ -43,6 +41,6 @@ lexer s p = do
   let ws' = helper ws p as
   return (ws' ++ xs)
   where
-    helper ((w, s):[]) p as = [LocToken w p s as]
+    helper [(w, s)] p as = [LocToken w p s as]
     helper ((w, s):ws) p as =
       LocToken w p s "" : helper ws (updatePosString p s) as

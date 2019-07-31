@@ -8,12 +8,12 @@ import GL.Parser
 
 main :: IO ()
 main = do
-  (Args {..}) <- getArgs
+  Args {..} <- getArgs
   fileContent <- readFile inputFileArg
-  case (lexGregLang inputFileArg fileContent) of
+  case lexGregLang inputFileArg fileContent of
     (Left err) -> putStrLn err
     (Right tok) ->
-      case (parseGregLang inputFileArg tok) of
+      case parseGregLang inputFileArg tok of
         (Left err) -> putStrLn err
         (Right ast) -> print ast
   return ()

@@ -7,7 +7,7 @@ import GL.Treeable
 data AST =
   AST [GLImport] GLClass
 
-data GLImport =
+newtype GLImport =
   GLImport [String]
 
 data GLClass =
