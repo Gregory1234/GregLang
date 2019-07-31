@@ -34,6 +34,6 @@ test-suite GregLangTests
   type:               exitcode-stdio-1.0
   main-is:            MainTest.hs
   -- other-modules:
-  build-depends:      base ^>=4.12.0.0, QuickCheck, GregLang, megaparsec
+  build-depends:      base ^>=4.12.0.0, tasty, tasty-quickcheck, QuickCheck, GregLang, megaparsec
   hs-source-dirs:     test
   default-language:    Haskell2010

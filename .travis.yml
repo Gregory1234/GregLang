@@ -1,5 +1,11 @@
 language: haskell
+cache:
+  directories:
+  - "$HOME/.cabal/store"
+  - "$HOME/.stack"
+  - "$TRAVIS_BUILD_DIR/.stack-work"
 cabal: "2.4"
 ghc:
   - "8.6.5"
+install: ""
 script: "make test"

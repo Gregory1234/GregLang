@@ -83,6 +83,9 @@ data Keyword
   | KParenCl
   deriving (Eq, Ord, Enum, Bounded)
 
+keywords :: [Keyword]
+keywords = [minBound .. maxBound]
+
 instance Show Keyword where
   show KClass = "class"
   show KIf = "if"
@@ -99,8 +102,7 @@ instance Show Keyword where
 
 instance Read Keyword where
   readPrec =
-    foldl1 (<++) $
-    map (\x -> lift (RP.string $ show x) $> x) [minBound .. maxBound]
+    foldl1 (<++) $ map (\x -> lift (RP.string (show x) <* RP.eof) $> x) keywords
 
 data LocToken =
   LocToken
