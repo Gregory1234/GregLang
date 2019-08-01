@@ -16,10 +16,17 @@ import qualified Text.ParserCombinators.ReadP as RP
 import Text.Read
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
-updatePosString p s =
-  let (x, y, z) =
-        P.reachOffset (length s) (P.PosState s 0 p P.defaultTabWidth "")
-   in x
+updatePosString p [] = p
+updatePosString p ('\t':xs) =
+  updatePosString
+    (p {P.sourceColumn = P.sourceColumn p <> P.defaultTabWidth})
+    xs
+updatePosString p ('\n':xs) =
+  updatePosString
+    (p {P.sourceLine = P.sourceLine p <> P.pos1, P.sourceColumn = P.pos1})
+    xs
+updatePosString p (_:xs) =
+  updatePosString (p {P.sourceColumn = P.sourceColumn p <> P.pos1}) xs
 
 data Token
   = TBegin
@@ -114,7 +121,11 @@ data LocToken =
   deriving (Eq, Ord)
 
 instance Show LocToken where
-  show LocToken {..} = show tokenVal ++ " at " ++ P.sourcePosPretty tokenPos
+  show LocToken {..} =
+    show tokenVal ++
+    " at " ++
+    P.sourcePosPretty tokenPos ++
+    " spelled " ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter

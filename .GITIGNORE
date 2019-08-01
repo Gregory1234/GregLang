@@ -1,2 +1,6 @@
 dist-newstyle/
+dist/
 .ghc.environment.x86_64-mingw32-8.6.5
+*.hp
+*.prof
+*.local

@@ -3,7 +3,6 @@ module Main where
 import Data.Char
 import GL.Data.Token
 import GL.Lexer
-import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck
 import qualified Text.Megaparsec as P
@@ -17,8 +16,7 @@ instance Arbitrary Token where
   arbitrary =
     oneof
       [ TIdent <$>
-        (((:) <$> (arbitrary `suchThat` (\c -> isAlpha c || c == '_')) <*>
-          listOf (arbitrary `suchThat` (\c -> isAlphaNum c || c == '_'))) `suchThat`
+        (((:) <$> elements identBegList <*> listOf (elements identMidList)) `suchThat`
          (`notElem` map show keywords))
       , TIntLit <$> (arbitrary `suchThat` (>= 0))
       , TKeyword <$> arbitrary
@@ -42,51 +40,57 @@ instance Arbitrary Token where
   shrink (TIntLit x) = TIntLit <$> filter (>= 0) (shrink x)
   shrink (TKeyword x) = TKeyword <$> shrink x
 
-{-instance Arbitrary LocToken where
-  arbitrary = do
-    tok <- arbitrary
-    pos <- arbitrary
-    sd <- mapM (\x -> elements [toUpper x, toLower x]) (spellToken tok)
-    sa <- listOf (arbitrary `suchThat` isSpace)
-    return $ LocToken tok pos sd sa-}
 newtype TokenStream =
   TokenStream [LocToken]
   deriving (Show)
 
-{-arbitrarySpelling (TKeyword a) =
-  mapM (\x -> elements [toUpper x, toLower x]) (show a)-}
-arbitrarySpelling x = return $ spellToken x
+arbitrarySpelling = return . spellToken
 
-arbitraryTokenStream :: Int -> Gen [LocToken]
-arbitraryTokenStream 0 = return []
-arbitraryTokenStream n = do
+spaceList = filter isSpace [minBound .. maxBound]
+
+identBegList = filter (\c -> isAlpha c || c == '_') [minBound .. maxBound]
+
+identMidList = filter (\c -> isAlphaNum c || c == '_') [minBound .. maxBound]
+
+arbitraryTokenStream :: Int -> P.SourcePos -> Gen [LocToken]
+arbitraryTokenStream 0 _ = return []
+arbitraryTokenStream n p = do
   tok <- arbitrary
   sd <- arbitrarySpelling tok
-  sa <- listOf1 (arbitrary `suchThat` isSpace)
-  (LocToken tok (P.initialPos "") sd sa :) <$> arbitraryTokenStream (n - 1)
+  sa <- listOf1 (elements spaceList)
+  (LocToken tok p sd sa :) <$>
+    arbitraryTokenStream (n - 1) (updatePosString p (sd ++ sa))
 
 instance Arbitrary TokenStream where
   arbitrary = do
     n <- getSize
-    sf <- listOf (arbitrary `suchThat` isSpace)
+    sf <- listOf (elements spaceList)
     TokenStream . (LocToken TBegin (P.initialPos "") "" sf :) <$>
-      arbitraryTokenStream n
-  shrink (TokenStream (b:l)) = TokenStream . (b :) <$> shrinkTokenStream l
+      arbitraryTokenStream n (updatePosString (P.initialPos "") sf)
+  shrink (TokenStream (b:l)) =
+    TokenStream . fixPos (P.initialPos "") . (b :) <$> shrinkTokenStream l
     where
       shrinkTokenStream [] = []
       shrinkTokenStream [x] = pure <$> shrinkLocToken x
       shrinkTokenStream (x:xs) =
         (x : init xs) :
-        xs : (pure <$> shrinkLocToken x) ++ ((x :) <$> shrinkTokenStream xs)
-      shrinkLocToken (LocToken t p s1 s2) =
-        (\x -> LocToken x p (spellToken x) s2) <$> shrink t
+        xs : ((: xs) <$> shrinkLocToken x) ++ ((x :) <$> shrinkTokenStream xs)
+      shrinkLocToken (LocToken t p sd sa) =
+        (\x ws -> LocToken x p (spellToken x) ws) <$> shrink t <*> shrinkWs sa
+      shrinkWs "" = []
+      shrinkWs (' ':xs) = [xs]
+      shrinkWs (x:xs) = (' ' : xs) : ((x :) <$> shrinkWs xs)
+      fixPos _ [] = []
+      fixPos p (LocToken t _ sd sa:xs) =
+        LocToken t p sd sa : fixPos (updatePosString p (sd ++ sa)) xs
 
 lexerReversable :: TokenStream -> Property
 lexerReversable (TokenStream l) =
-  Right (tokenVal <$> l) ===
-  (map tokenVal <$> lexGregLang "" (l >>= recreateToken))
+  Right l === lexGregLang "" (l >>= recreateToken)
 
 tests :: TestTree
-tests = testGroup "Lexer" [testProperty "lexer reversable" lexerReversable]
+tests = testGroup "Lexer" [mkTest "lexer reversable" lexerReversable]
+  where
+    mkTest s = testProperty s . withMaxSuccess 100
 
 main = defaultMain tests
