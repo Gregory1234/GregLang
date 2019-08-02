@@ -5,6 +5,7 @@ module GL.Parser
   ) where
 
 import Control.Monad
+import Data.Functor.Identity
 import Data.Maybe
 import Data.Void
 import GL.Data.SyntaxTree
@@ -38,17 +39,17 @@ tokenIdent =
 tokenKeyword :: String -> Parser ()
 tokenKeyword = tokenExact . TKeyword . read
 
-parser :: Parser AST
+parser :: Parser (AST Identity)
 parser = AST [] <$> (tokenExact TBegin *> classParser <* P.eof)
 
-classParser :: Parser GLClass
+classParser :: Parser (GLClass Identity)
 classParser =
   GLClass <$> (tokenKeyword "class" *> tokenIdent) <*> P.many funParser
 
-funParser :: Parser GLFun
+funParser :: Parser (GLFun Identity)
 funParser = GLFun <$> tokenIdent <*> pure [] <*> braces (P.many statParser)
 
-statParser :: Parser GLStat
+statParser :: Parser (GLStat Identity)
 statParser =
   P.choice
     [ (\a b -> maybe (SIf a b) (SIfElse a b)) <$>
@@ -59,8 +60,9 @@ statParser =
     , SExpr <$> exprParser
     ]
 
-exprParser :: Parser GLExpr
+exprParser :: Parser (GLExpr Identity)
 exprParser =
+  GLExpr . Identity <$>
   P.choice
     [ EIntLit <$>
       tokenSatisfy
@@ -75,7 +77,7 @@ exprParser =
     , EParen <$> bracketAny (tokenKeyword "(") (tokenKeyword ")") exprParser
     ]
 
-parseGregLang :: FilePath -> [LocToken] -> Either String AST
+parseGregLang :: FilePath -> [LocToken] -> Either String (AST Identity)
 parseGregLang p t =
   case P.runParser parser p t of
     (Left err) -> Left $ P.errorBundlePretty err
