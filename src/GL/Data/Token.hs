@@ -73,7 +73,8 @@ instance Read Token where
         lift
           ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*>
            RP.munch (\x -> isAlphaNum x || x == '_'))
-      ]
+      ] <*
+    lift RP.eof
 
 data Keyword
   = KClass
@@ -108,8 +109,7 @@ instance Show Keyword where
   show KParenCl = ")"
 
 instance Read Keyword where
-  readPrec =
-    foldl1 (<++) $ map (\x -> lift (RP.string (show x) <* RP.eof) $> x) keywords
+  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) keywords
 
 data LocToken =
   LocToken

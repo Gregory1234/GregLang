@@ -65,15 +65,23 @@ exprParser :: Parser (GLExpr Identity)
 exprParser =
   GLExpr . Identity <$>
   P.choice
-    [ EIntLit <$>
+    [ P.label "int literal" $
+      EIntLit <$>
       tokenSatisfy
         (\case
            (TIntLit a) -> Just a
            _ -> Nothing)
-    , EFloatLit <$>
+    , P.label "float literal" $
+      EFloatLit <$>
       tokenSatisfy
         (\case
            (TFloatLit a) -> Just a
+           _ -> Nothing)
+    , P.label "string literal" $
+      EStringLit <$>
+      tokenSatisfy
+        (\case
+           (TStringLit a) -> Just a
            _ -> Nothing)
     , EParen <$> bracketAny (tokenKeyword "(") (tokenKeyword ")") exprParser
     ]

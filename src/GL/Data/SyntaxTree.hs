@@ -35,6 +35,7 @@ newtype GLExpr t =
 data UntypedExpr e
   = EIntLit Integer
   | EFloatLit Double
+  | EStringLit String
   | EParen e
 
 instance TypeFunctor t => Treeable (AST t) where
@@ -70,6 +71,7 @@ instance TypeFunctor t => Treeable (GLExpr t) where
 instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EIntLit i) = toTree $ show i
   toTree (EFloatLit f) = toTree $ show f
+  toTree (EStringLit s) = toTree $ show s
   toTree (EParen e) = Node "parens" [toTree e]
 
 instance TypeFunctor t => Show (AST t) where

@@ -38,11 +38,25 @@ lexer' s p =
 
 lexer :: String -> P.SourcePos -> Either String [LocToken]
 lexer "" _ = Right []
+lexer s@('"':xs) p = do
+  let (ds, nds) = helper xs ""
+  let (as, s') = span isSpace nds
+  w <- maybeToEither ds $ readMaybe ('"' : ds)
+  let p' = updatePosString p (('"' : ds) ++ as)
+  xs <- lexer s' p'
+  return (LocToken w p ('"' : ds) as : xs)
+  where
+    helper xs ys =
+      let (ds, nds) = break (\x -> x == '"' || x == '\\') xs
+          (as, d:ds') = span (== '\\') nds
+       in if even (length as) && d == '"'
+            then (ys ++ ds ++ as ++ "\"", ds')
+            else helper ds' (ys ++ ds ++ as ++ pure d)
 lexer s p = do
   let (ds, nds) = break isSpace s
   let (as, s') = span isSpace nds
   ws <-
-    maybeToEither (show ds) $
+    maybeToEither ds $
     if ds == ""
       then Just [(TBegin, "")]
       else splitGreedyRead ds

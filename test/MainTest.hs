@@ -20,6 +20,7 @@ instance Arbitrary Token where
          (`notElem` map show keywords))
       , TIntLit <$> (arbitrary `suchThat` (>= 0))
       , TKeyword <$> arbitrary
+      , TStringLit <$> arbitrary
       ]
   shrink TBegin = []
   shrink (TIdent x) =
@@ -39,6 +40,15 @@ instance Arbitrary Token where
         | otherwise = ['a']
   shrink (TIntLit x) = TIntLit <$> filter (>= 0) (shrink x)
   shrink (TKeyword x) = TKeyword <$> shrink x
+  shrink (TStringLit "") = []
+  shrink (TStringLit "a") = [TStringLit []]
+  shrink (TStringLit ('a':xs)) = [TStringLit xs, TStringLit ('a' : init xs)]
+  shrink (TStringLit [x]) = [TStringLit [], TStringLit "a"]
+  shrink (TStringLit (x:xs)) =
+    TStringLit xs :
+    TStringLit (x : init xs) :
+    TStringLit ('a' : xs) :
+    (TStringLit . (x :) . (\(TStringLit x) -> x) <$> shrink (TStringLit xs))
 
 newtype TokenStream =
   TokenStream [LocToken]
@@ -76,9 +86,12 @@ instance Arbitrary TokenStream where
         (x : init xs) :
         xs : ((: xs) <$> shrinkLocToken x) ++ ((x :) <$> shrinkTokenStream xs)
       shrinkLocToken (LocToken t p sd sa) =
-        (\x ws -> LocToken x p (spellToken x) ws) <$> shrink t <*> shrinkWs sa
+        let f x = LocToken x p (spellToken x)
+         in (flip f sa <$> shrink t) ++ (f t <$> shrinkWs sa)
       shrinkWs "" = []
-      shrinkWs (' ':xs) = [xs]
+      shrinkWs " " = [""]
+      shrinkWs (' ':xs) = [xs, ' ' : init xs]
+      shrinkWs [x] = [" "]
       shrinkWs (x:xs) = (' ' : xs) : ((x :) <$> shrinkWs xs)
       fixPos _ [] = []
       fixPos p (LocToken t _ sd sa:xs) =
