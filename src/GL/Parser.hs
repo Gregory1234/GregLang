@@ -47,7 +47,8 @@ classParser =
   GLClass <$> (tokenKeyword "class" *> tokenIdent) <*> P.many funParser
 
 funParser :: Parser (GLFun Identity)
-funParser = GLFun <$> tokenIdent <*> pure [] <*> braces (P.many statParser)
+funParser =
+  GLFun <$> (Identity <$> tokenIdent) <*> pure [] <*> braces (P.many statParser)
 
 statParser :: Parser (GLStat Identity)
 statParser =

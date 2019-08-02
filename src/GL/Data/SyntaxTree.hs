@@ -1,8 +1,9 @@
-{-# LANGUAGE FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module GL.Data.SyntaxTree where
 
 import Data.List
+import Data.Proxy
 import Data.Tree
 import GL.Type
 import GL.Utils
@@ -17,7 +18,7 @@ data GLClass t =
   GLClass String [GLFun t]
 
 data GLFun t =
-  GLFun String [String] [GLStat t]
+  GLFun (t String) [t String] [GLStat t]
 
 data GLStat t
   = SIf (GLExpr t) (GLStat t)
@@ -47,8 +48,8 @@ instance TypeFunctor t => Treeable (GLClass t) where
 
 instance TypeFunctor t => Treeable (GLFun t) where
   toTree (GLFun n as s) =
-    let (Node x y) = listToTree ("fun " ++ n) s
-     in Node x (listToTree "args" as : y)
+    let (Node x y) = listToTree ("fun " ++ showAnnotatedString n) s
+     in Node x (listToTree "args" (showAnnotatedString <$> as) : y)
 
 instance TypeFunctor t => Treeable (GLStat t) where
   toTree (SIf e s) = Node "if" [toTree e, Node "then" [toTree s]]
@@ -62,9 +63,9 @@ instance TypeFunctor t => Treeable (GLStat t) where
   toTree (SExpr e) = toTree e
 
 instance TypeFunctor t => Treeable (GLExpr t) where
-  toTree (GLExpr t) =
+  toTree (GLExpr (t :: t (UntypedExpr (GLExpr t)))) =
     let (Node a l) = toTree $ getValTF t
-     in Node (showTypeAnnotation (getTypeTF t) a) l
+     in Node (showTypeAnnotation (Proxy :: Proxy t) (getTypeTF t) a) l
 
 instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EIntLit i) = toTree $ show i
