@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, TupleSections #-}
 
 module GL.Parser
   ( parseGregLang
@@ -39,18 +39,17 @@ tokenIdent =
 tokenKeyword :: String -> Parser ()
 tokenKeyword = tokenExact . TKeyword . read
 
-parser :: Parser (AST Identity)
+parser :: Parser (AST ())
 parser = AST [] <$> (tokenExact TBegin *> classParser <* P.eof)
 
-classParser :: Parser (GLClass Identity)
+classParser :: Parser (GLClass ())
 classParser =
   GLClass <$> (tokenKeyword "class" *> tokenIdent) <*> P.many funParser
 
-funParser :: Parser (GLFun Identity)
-funParser =
-  GLFun <$> (Identity <$> tokenIdent) <*> pure [] <*> braces (P.many statParser)
+funParser :: Parser (GLFun ())
+funParser = GLFun () <$> tokenIdent <*> pure [] <*> braces (P.many statParser)
 
-statParser :: Parser (GLStat Identity)
+statParser :: Parser (GLStat ())
 statParser =
   P.choice
     [ (\a b -> maybe (SIf a b) (SIfElse a b)) <$>
@@ -61,9 +60,9 @@ statParser =
     , SExpr <$> exprParser
     ]
 
-exprParser :: Parser (GLExpr Identity)
+exprParser :: Parser (GLExpr ())
 exprParser =
-  GLExpr . Identity <$>
+  GLExpr () <$>
   P.choice
     [ P.label "int literal" $
       EIntLit <$>
@@ -86,7 +85,7 @@ exprParser =
     , EParen <$> bracketAny (tokenKeyword "(") (tokenKeyword ")") exprParser
     ]
 
-parseGregLang :: FilePath -> [LocToken] -> Either String (AST Identity)
+parseGregLang :: FilePath -> [LocToken] -> Either String (AST ())
 parseGregLang p t =
   case P.runParser parser p t of
     (Left err) -> Left $ P.errorBundlePretty err

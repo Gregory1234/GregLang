@@ -64,7 +64,12 @@ instance Read Token where
   readPrec =
     foldl1
       (<++)
-      [ TKeyword <$> readPrec
+      [ do a <- readPrec
+           b <- lift RP.look
+           guard
+             (null b ||
+              not (isLetter $ head $ show a) || not (isAlphaNum $ head b))
+           return $ TKeyword a
       , TStringLit <$> readPrec
       , TIntLit <$> readPrec
       , TFloatLit <$> readPrec
@@ -73,8 +78,7 @@ instance Read Token where
         lift
           ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*>
            RP.munch (\x -> isAlphaNum x || x == '_'))
-      ] <*
-    lift RP.eof
+      ]
 
 data Keyword
   = KClass

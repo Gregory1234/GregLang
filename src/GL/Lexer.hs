@@ -4,6 +4,7 @@ module GL.Lexer
 
 import Control.Applicative
 import Data.Char
+import Data.List
 import GL.Data.Token
 import qualified Text.Megaparsec as P
 import Text.Read
@@ -12,16 +13,14 @@ maybeToEither :: e -> Maybe a -> Either e a
 maybeToEither e Nothing = Left e
 maybeToEither _ (Just a) = Right a
 
-splitGreedyRead :: Read a => String -> Maybe [(a, String)]
+splitGreedyRead :: String -> Maybe [(Token, String)]
 splitGreedyRead "" = Just []
-splitGreedyRead s = helper s ""
-  where
-    helper "" _ = Nothing
-    helper s1 s2 =
-      maybe
-        (helper (init s1) (last s1 : s2))
-        (\a -> ((a, s1) :) <$> splitGreedyRead s2)
-        (readMaybe s1)
+splitGreedyRead s =
+  let l = reads s
+   in case l of
+        [] -> Nothing
+        ((a, r):_) ->
+          ((a, take (length $ spellToken a) s) :) <$> splitGreedyRead r
 
 lexGregLang :: FilePath -> String -> Either String [LocToken]
 lexGregLang fn str = lexer' str (P.initialPos fn)

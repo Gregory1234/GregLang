@@ -18,7 +18,7 @@ data GLClass t =
   GLClass String [GLFun t]
 
 data GLFun t =
-  GLFun (t String) [t String] [GLStat t]
+  GLFun t String [(t, String)] [GLStat t]
 
 data GLStat t
   = SIf (GLExpr t) (GLStat t)
@@ -29,8 +29,8 @@ data GLStat t
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
 
-newtype GLExpr t =
-  GLExpr (t (UntypedExpr (GLExpr t)))
+data GLExpr t =
+  GLExpr t (UntypedExpr (GLExpr t))
 
 data UntypedExpr e
   = EIntLit Integer
@@ -38,21 +38,21 @@ data UntypedExpr e
   | EStringLit String
   | EParen e
 
-instance TypeFunctor t => Treeable (AST t) where
+instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
 
 instance Treeable GLImport where
   toTree = toTree . show
 
-instance TypeFunctor t => Treeable (GLClass t) where
+instance IsType t => Treeable (GLClass t) where
   toTree (GLClass n f) = listToTree ("class " ++ n) f
 
-instance TypeFunctor t => Treeable (GLFun t) where
-  toTree (GLFun n as s) =
-    let (Node x y) = listToTree ("fun " ++ showAnnotatedString n) s
-     in Node x (listToTree "args" (showAnnotatedString <$> as) : y)
+instance IsType t => Treeable (GLFun t) where
+  toTree (GLFun t n as s) =
+    let (Node x y) = listToTree ("fun " ++ showType t n) s
+     in Node x (listToTree "args" (uncurry showType <$> as) : y)
 
-instance TypeFunctor t => Treeable (GLStat t) where
+instance IsType t => Treeable (GLStat t) where
   toTree (SIf e s) = Node "if" [toTree e, Node "then" [toTree s]]
   toTree (SIfElse e s1 s2) =
     Node "if" [toTree e, Node "then" [toTree s1], Node "else" [toTree s2]]
@@ -63,10 +63,8 @@ instance TypeFunctor t => Treeable (GLStat t) where
   toTree (SBraces s) = listToTree "braces" s
   toTree (SExpr e) = toTree e
 
-instance TypeFunctor t => Treeable (GLExpr t) where
-  toTree (GLExpr (t :: t (UntypedExpr (GLExpr t)))) =
-    let (Node a l) = toTree $ getValTF t
-     in Node (showTypeAnnotation (Proxy :: Proxy t) (getTypeTF t) a) l
+instance IsType t => Treeable (GLExpr t) where
+  toTree (GLExpr t e) = showTypeTree t (toTree e)
 
 instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EIntLit i) = toTree $ show i
@@ -74,22 +72,22 @@ instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EStringLit s) = toTree $ show s
   toTree (EParen e) = Node "parens" [toTree e]
 
-instance TypeFunctor t => Show (AST t) where
+instance IsType t => Show (AST t) where
   show = treeShow
 
 instance Show GLImport where
   show (GLImport s) = intercalate "." s
 
-instance TypeFunctor t => Show (GLClass t) where
+instance IsType t => Show (GLClass t) where
   show = treeShow
 
-instance TypeFunctor t => Show (GLFun t) where
+instance IsType t => Show (GLFun t) where
   show = treeShow
 
-instance TypeFunctor t => Show (GLStat t) where
+instance IsType t => Show (GLStat t) where
   show = treeShow
 
-instance TypeFunctor t => Show (GLExpr t) where
+instance IsType t => Show (GLExpr t) where
   show = treeShow
 
 instance Treeable e => Show (UntypedExpr e) where
