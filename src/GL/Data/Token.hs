@@ -11,7 +11,7 @@ import Data.List
 import qualified Data.List.NonEmpty as NE
 import Data.List.Split
 import Data.Proxy
-import GL.Data.Token.TH
+import GL.Data.TH
 import GL.Utils
 import qualified Text.Megaparsec as P
 import qualified Text.ParserCombinators.ReadP as RP
@@ -30,7 +30,56 @@ updatePosString p ('\n':xs) =
 updatePosString p (_:xs) =
   updatePosString (p {P.sourceColumn = P.sourceColumn p <> P.pos1}) xs
 
-$(genKeywords keywordNames)
+$(genEnum
+    "Keyword"
+    "K"
+    (mkEnumList
+       [ "Class"
+       , "If"
+       , "Else"
+       , "While"
+       , "Do"
+       , "For"
+       , "Let"
+       , "Return"
+       , "Import"
+       , "Break"
+       , "Continue"
+       , "BraceOp {"
+       , "BraceCl }"
+       , "ParenOp ("
+       , "ParenCl )"
+       , "Equal =="
+       , "LessEq <="
+       , "GreaterEq >="
+       , "NotEq !="
+       , "AddSet +="
+       , "SubSet -="
+       , "MulSet *="
+       , "DivSet /="
+       , "ModSet %="
+       , "AndSet &&="
+       , "OrSet ||="
+       , "XorSet ^^="
+       , "BAndSet &="
+       , "BOrSet |="
+       , "BXorSet ^="
+       , "Set ="
+       , "Less <"
+       , "Greater >"
+       , "Not !"
+       , "Add +"
+       , "Sub -"
+       , "Mul *"
+       , "Div /"
+       , "Mod %"
+       , "And &&"
+       , "Or ||"
+       , "Xor ^^"
+       , "BAnd &"
+       , "BOr |"
+       , "BXor ^"
+       ]))
 
 keywords :: [Keyword]
 keywords = [minBound .. maxBound]

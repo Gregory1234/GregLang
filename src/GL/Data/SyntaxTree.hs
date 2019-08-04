@@ -1,12 +1,56 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell #-}
 
 module GL.Data.SyntaxTree where
 
 import Data.List
 import Data.Proxy
 import Data.Tree
+import GL.Data.TH
 import GL.Type
 import GL.Utils
+
+$(genEnum
+    "SetOp"
+    "Op"
+    (mkEnumList
+       [ "AddSet +="
+       , "SubSet -="
+       , "MulSet *="
+       , "DivSet /="
+       , "ModSet %="
+       , "AndSet &&="
+       , "OrSet ||="
+       , "XorSet ^^="
+       , "BAndSet &="
+       , "BOrSet |="
+       , "BXorSet ^="
+       , "Set ="
+       ]))
+
+$(genEnum
+    "ExprOp"
+    "EOp"
+    (mkEnumList
+       [ "Equal =="
+       , "LessEq <="
+       , "GreaterEq >="
+       , "NotEq !="
+       , "Less <"
+       , "Greater >"
+       , "Add +"
+       , "Sub -"
+       , "Mul *"
+       , "Div /"
+       , "Mod %"
+       , "And &&"
+       , "Or ||"
+       , "Xor ^^"
+       , "BAnd &"
+       , "BOr |"
+       , "BXor ^"
+       ]))
+
+$(genEnum "ExprPrefixOp" "EPfxOp" (mkEnumList ["Not !", "Sub -"]))
 
 data AST t =
   AST [GLImport] (GLClass t)
@@ -25,7 +69,12 @@ data GLStat t
   | SIfElse (GLExpr t) (GLStat t) (GLStat t)
   | SFor (GLStat t) (GLExpr t) (GLStat t) (GLStat t)
   | SWhile (GLExpr t) (GLStat t)
+  | SDoWhile (GLExpr t) (GLStat t)
   | SLet String (GLExpr t)
+  | SSet String SetOp (GLExpr t)
+  | SReturn (GLExpr t)
+  | SBreak
+  | SContinue
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
 
@@ -35,7 +84,10 @@ data GLExpr t =
 data UntypedExpr e
   = EIntLit Integer
   | EFloatLit Double
+  | ECharLit Char
   | EStringLit String
+  | EOp e ExprOp e
+  | EPrefix ExprPrefixOp e
   | EParen e
 
 instance IsType t => Treeable (AST t) where
@@ -59,7 +111,12 @@ instance IsType t => Treeable (GLStat t) where
   toTree (SFor s1 e s2 s3) =
     Node "for" [toTree s1, toTree e, toTree s2, Node "do" [toTree s3]]
   toTree (SWhile e s) = Node "while" [toTree e, Node "do" [toTree s]]
-  toTree (SLet n e) = Node ("let " ++ n ++ " = ") [toTree e]
+  toTree (SDoWhile e s) = Node "do" [toTree s, Node "while" [toTree e]]
+  toTree (SLet n e) = Node ("let " ++ n ++ " =") [toTree e]
+  toTree (SSet n op e) = Node (n ++ " " ++ show op) [toTree e]
+  toTree (SReturn e) = Node "return" [toTree e]
+  toTree SBreak = toTree "break"
+  toTree SContinue = toTree "continue"
   toTree (SBraces s) = listToTree "braces" s
   toTree (SExpr e) = toTree e
 
@@ -70,6 +127,8 @@ instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EIntLit i) = toTree $ show i
   toTree (EFloatLit f) = toTree $ show f
   toTree (EStringLit s) = toTree $ show s
+  toTree (EOp e1 op e2) = Node ("operator " ++ show op) [toTree e1, toTree e2]
+  toTree (EPrefix op e) = Node ("operator " ++ show op) [toTree e]
   toTree (EParen e) = Node "parens" [toTree e]
 
 instance IsType t => Show (AST t) where

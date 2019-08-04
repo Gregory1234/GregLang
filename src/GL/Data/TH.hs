@@ -1,23 +1,23 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module GL.Data.Token.TH where
+module GL.Data.TH where
 
 import Data.Char
 import Language.Haskell.TH
 
-genKeywords :: [(String, String)] -> Q [Dec]
-genKeywords xs = do
-  let kw = mkName "Keyword"
+genEnum :: String -> String -> [(String, String)] -> Q [Dec]
+genEnum n pf xs = do
+  let kw = mkName n
   ys <-
     mapM
       (\(a, b) -> do
-         let n = mkName ('K' : a)
+         let n = mkName (pf ++ a)
          return (NormalC n []))
       xs
   ins <-
     mapM
       (\(a, b) -> do
-         let n = mkName ('K' : a)
+         let n = mkName (pf ++ a)
          return (Clause [ConP n []] (NormalB (LitE (StringL b))) []))
       xs
   return
@@ -38,23 +38,11 @@ genKeywords xs = do
         [FunD (mkName "show") ins]
     ]
 
-keywordNames :: [(String, String)]
-keywordNames =
+mkEnumList :: [String] -> [(String, String)]
+mkEnumList =
   map
     (\w ->
        let (x:xs) = words w
         in case xs of
              [] -> (x, map toLower x)
              (y:_) -> (x, y))
-    [ "Class"
-    , "If"
-    , "Else"
-    , "While"
-    , "Do"
-    , "For"
-    , "Let"
-    , "BraceOp {"
-    , "BraceCl }"
-    , "ParenOp ("
-    , "ParenCl )"
-    ]
