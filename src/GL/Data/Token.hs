@@ -1,4 +1,5 @@
-{-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
+  TemplateHaskell #-}
 
 module GL.Data.Token where
 
@@ -10,6 +11,7 @@ import Data.List
 import qualified Data.List.NonEmpty as NE
 import Data.List.Split
 import Data.Proxy
+import GL.Data.Token.TH
 import GL.Utils
 import qualified Text.Megaparsec as P
 import qualified Text.ParserCombinators.ReadP as RP
@@ -27,6 +29,14 @@ updatePosString p ('\n':xs) =
     xs
 updatePosString p (_:xs) =
   updatePosString (p {P.sourceColumn = P.sourceColumn p <> P.pos1}) xs
+
+$(genKeywords keywordNames)
+
+keywords :: [Keyword]
+keywords = [minBound .. maxBound]
+
+instance Read Keyword where
+  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) keywords
 
 data Token
   = TBegin
@@ -79,41 +89,6 @@ instance Read Token where
           ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*>
            RP.munch (\x -> isAlphaNum x || x == '_'))
       ]
-
-data Keyword
-  = KClass
-  | KIf
-  | KElse
-  | KFor
-  | KWhile
-  | KLet
-  | KBrackOp
-  | KBrackCl
-  | KBraceOp
-  | KBraceCl
-  | KParenOp
-  | KParenCl
-  deriving (Eq, Ord, Enum, Bounded)
-
-keywords :: [Keyword]
-keywords = [minBound .. maxBound]
-
-instance Show Keyword where
-  show KClass = "class"
-  show KIf = "if"
-  show KElse = "else"
-  show KFor = "for"
-  show KWhile = "while"
-  show KLet = "let"
-  show KBrackOp = "["
-  show KBrackCl = "]"
-  show KBraceOp = "{"
-  show KBraceCl = "}"
-  show KParenOp = "("
-  show KParenCl = ")"
-
-instance Read Keyword where
-  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) keywords
 
 data LocToken =
   LocToken
