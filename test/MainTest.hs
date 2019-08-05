@@ -21,6 +21,7 @@ instance Arbitrary Token where
       , TIntLit <$> (arbitrary `suchThat` (>= 0))
       , TKeyword <$> arbitrary
       , TStringLit <$> arbitrary
+      , TCharLit <$> arbitrary
       ]
   shrink TBegin = []
   shrink (TIdent x) =
@@ -40,6 +41,7 @@ instance Arbitrary Token where
         | otherwise = ['a']
   shrink (TIntLit x) = TIntLit <$> filter (>= 0) (shrink x)
   shrink (TKeyword x) = TKeyword <$> shrink x
+  shrink (TCharLit x) = TCharLit <$> shrink x
   shrink (TStringLit "") = []
   shrink (TStringLit "a") = [TStringLit []]
   shrink (TStringLit ('a':xs)) = [TStringLit xs, TStringLit ('a' : init xs)]

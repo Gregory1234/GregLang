@@ -49,6 +49,7 @@ $(genEnum
        , "BraceCl }"
        , "ParenOp ("
        , "ParenCl )"
+       , "Semicolon ;"
        , "Equal =="
        , "LessEq <="
        , "GreaterEq >="
@@ -113,11 +114,7 @@ instance Show Token where
   show (TIntLit s) = "<int " ++ show s ++ ">"
   show (TFloatLit s) = "<float " ++ show s ++ ">"
   show (TCharLit s) = "<char " ++ show s ++ ">"
-  show (TKeyword s) =
-    let x = show s
-     in if isAlphaNum (head x)
-          then show x
-          else "'" ++ x ++ "'"
+  show (TKeyword s) = show (show s)
 
 instance Read Token where
   readPrec =

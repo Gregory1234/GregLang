@@ -1,16 +1,19 @@
-{-# LANGUAGE LambdaCase, TupleSections #-}
+{-# LANGUAGE LambdaCase #-}
 
 module GL.Parser
   ( parseGregLang
   ) where
 
 import Control.Monad
+import Data.Bool
 import Data.Functor.Identity
 import Data.Maybe
+import Data.Tuple.HT
 import Data.Void
 import GL.Data.SyntaxTree
 import GL.Data.Token
 import qualified Text.Megaparsec as P
+import Text.Megaparsec ((<|>))
 
 type Parser = P.Parsec Void [LocToken]
 
@@ -27,6 +30,9 @@ bracketAny a b c = a *> c <* b
 
 braces :: Parser a -> Parser a
 braces = bracketAny (tokenKeyword "{") (tokenKeyword "}")
+
+parens :: Parser a -> Parser a
+parens = bracketAny (tokenKeyword "(") (tokenKeyword ")")
 
 tokenIdent :: Parser String
 tokenIdent =
@@ -51,14 +57,40 @@ funParser = GLFun () <$> tokenIdent <*> pure [] <*> braces (P.many statParser)
 
 statParser :: Parser (GLStat ())
 statParser =
-  P.choice
-    [ (\a b -> maybe (SIf a b) (SIfElse a b)) <$>
-      (tokenKeyword "if" *> exprParser) <*>
-      statParser <*>
-      P.optional (tokenKeyword "else" *> statParser)
-    , SBraces <$> braces (P.many statParser)
-    , SExpr <$> exprParser
-    ]
+  P.choice $
+  (SNoOp <$ tokenKeyword ";") :
+  (uncurry (bool (<* P.optional (tokenKeyword ";")) id) <$> statParsers)
+
+statParsers :: [(Bool, Parser (GLStat ()))]
+statParsers =
+  [ ( True
+    , flip SDoWhile <$> (tokenKeyword "do" *> statParser) <*>
+      (tokenKeyword "while" *> exprParser))
+  , (True, SReturn <$> (tokenKeyword "return" *> exprParser))
+  , (True, SBreak <$ tokenKeyword "break")
+  , (True, SContinue <$ tokenKeyword "continue")
+  , (True, SExpr <$> exprParser)
+  , ( False
+    , SIf <$> (tokenKeyword "if" *> exprParser) <*> statParser <*>
+      P.optional (tokenKeyword "else" *> statParser))
+  , (False, SWhile <$> (tokenKeyword "while" *> exprParser) <*> statParser)
+  , (False, SBraces <$> braces (P.many statParser))
+  , ( False
+    , uncurry3 SFor <$>
+      (P.try
+         (tokenKeyword "for" *>
+          parens (forHelper <* P.optional (tokenKeyword ";"))) <|>
+       (tokenKeyword "for" *> forHelper)) <*>
+      statParser)
+  ]
+  where
+    forHelper =
+      (,,) <$>
+      P.option
+        SNoOp
+        (P.choice (map snd statParsers) <* P.optional (tokenKeyword ";")) <*>
+      (exprParser <* P.optional (tokenKeyword ";")) <*>
+      P.choice (map snd statParsers)
 
 exprParser :: Parser (GLExpr ())
 exprParser =
@@ -82,7 +114,7 @@ exprParser =
         (\case
            (TStringLit a) -> Just a
            _ -> Nothing)
-    , EParen <$> bracketAny (tokenKeyword "(") (tokenKeyword ")") exprParser
+    , EParen <$> parens exprParser
     ]
 
 parseGregLang :: FilePath -> [LocToken] -> Either String (AST ())

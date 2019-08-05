@@ -65,8 +65,7 @@ data GLFun t =
   GLFun t String [(t, String)] [GLStat t]
 
 data GLStat t
-  = SIf (GLExpr t) (GLStat t)
-  | SIfElse (GLExpr t) (GLStat t) (GLStat t)
+  = SIf (GLExpr t) (GLStat t) (Maybe (GLStat t))
   | SFor (GLStat t) (GLExpr t) (GLStat t) (GLStat t)
   | SWhile (GLExpr t) (GLStat t)
   | SDoWhile (GLExpr t) (GLStat t)
@@ -75,6 +74,7 @@ data GLStat t
   | SReturn (GLExpr t)
   | SBreak
   | SContinue
+  | SNoOp
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
 
@@ -105,8 +105,8 @@ instance IsType t => Treeable (GLFun t) where
      in Node x (listToTree "args" (uncurry showType <$> as) : y)
 
 instance IsType t => Treeable (GLStat t) where
-  toTree (SIf e s) = Node "if" [toTree e, Node "then" [toTree s]]
-  toTree (SIfElse e s1 s2) =
+  toTree (SIf e s Nothing) = Node "if" [toTree e, Node "then" [toTree s]]
+  toTree (SIf e s1 (Just s2)) =
     Node "if" [toTree e, Node "then" [toTree s1], Node "else" [toTree s2]]
   toTree (SFor s1 e s2 s3) =
     Node "for" [toTree s1, toTree e, toTree s2, Node "do" [toTree s3]]
@@ -117,6 +117,7 @@ instance IsType t => Treeable (GLStat t) where
   toTree (SReturn e) = Node "return" [toTree e]
   toTree SBreak = toTree "break"
   toTree SContinue = toTree "continue"
+  toTree SNoOp = toTree "no op"
   toTree (SBraces s) = listToTree "braces" s
   toTree (SExpr e) = toTree e
 

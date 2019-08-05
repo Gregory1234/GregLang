@@ -13,6 +13,7 @@ main = do
   case lexGregLang inputFileArg fileContent of
     (Left err) -> putStrLn err
     (Right tok) ->
+      print tok *>
       case parseGregLang inputFileArg tok of
         (Left err) -> putStrLn err
         (Right ast) -> print ast
