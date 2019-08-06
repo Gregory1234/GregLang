@@ -20,6 +20,7 @@ library
         GL.Data.TH
     hs-source-dirs: src
     default-language: Haskell2010
+    ghc-options: -Wredundant-constraints -Widentities -W
     build-depends:
         base ^>=4.12.0.0,
         parseargs -any,
@@ -32,6 +33,7 @@ library
 executable GregLangCompiler
     main-is: Main.hs
     default-language: Haskell2010
+    ghc-options: -Wredundant-constraints -Widentities -W
     build-depends:
         base ^>=4.12.0.0,
         GregLang -any
@@ -41,6 +43,7 @@ test-suite GregLangTests
     main-is: MainTest.hs
     hs-source-dirs: test
     default-language: Haskell2010
+    ghc-options: -Wredundant-constraints -Widentities -W
     build-depends:
         base ^>=4.12.0.0,
         tasty -any,

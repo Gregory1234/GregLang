@@ -6,7 +6,6 @@ module GL.Parser
 
 import Control.Monad
 import Data.Bool
-import Data.Functor.Identity
 import Data.Maybe
 import Data.Maybe.HT
 import Data.Tuple.HT
@@ -17,8 +16,6 @@ import qualified Text.Megaparsec as P
 import Text.Megaparsec ((<|>))
 
 type Parser = P.Parsec Void [LocToken]
-
-type ParserError = P.ParseErrorBundle [LocToken] Void
 
 tokenSatisfy :: (Token -> Maybe a) -> Parser a
 tokenSatisfy f = fromJust . f . tokenVal <$> P.satisfy (isJust . f . tokenVal)

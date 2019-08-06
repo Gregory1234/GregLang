@@ -4,7 +4,6 @@ module GL.Data.SyntaxTree where
 
 import Data.Functor
 import Data.List
-import Data.Proxy
 import Data.Tree
 import GL.Data.TH
 import GL.Type

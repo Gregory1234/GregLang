@@ -2,9 +2,7 @@ module GL.Lexer
   ( lexGregLang
   ) where
 
-import Control.Applicative
 import Data.Char
-import Data.List
 import GL.Data.Token
 import qualified Text.Megaparsec as P
 import Text.Read
@@ -37,8 +35,8 @@ lexer' s p =
 
 lexer :: String -> P.SourcePos -> Either String [LocToken]
 lexer "" _ = Right []
-lexer s@('\'':xs) p = do
-  let (ds, nds) = helper xs ""
+lexer ('\'':s) p = do
+  let (ds, nds) = helper s ""
   let (as, s') = span isSpace nds
   w <- maybeToEither ('\'' : ds) $ readMaybe ('\'' : ds)
   let p' = updatePosString p (('\'' : ds) ++ as)
@@ -51,8 +49,8 @@ lexer s@('\'':xs) p = do
        in if even (length as) && d == '\''
             then (ys ++ ds ++ as ++ "\'", ds')
             else helper ds' (ys ++ ds ++ as ++ pure d)
-lexer s@('"':xs) p = do
-  let (ds, nds) = helper xs ""
+lexer ('"':s) p = do
+  let (ds, nds) = helper s ""
   let (as, s') = span isSpace nds
   w <- maybeToEither ('"' : ds) $ readMaybe ('"' : ds)
   let p' = updatePosString p (('"' : ds) ++ as)
@@ -78,6 +76,7 @@ lexer s p = do
   let ws' = helper ws p as
   return (ws' ++ xs)
   where
-    helper [(w, s)] p as = [LocToken w p s as]
-    helper ((w, s):ws) p as =
-      LocToken w p s "" : helper ws (updatePosString p s) as
+    helper [] _ _ = []
+    helper [(w, ds)] p as = [LocToken w p ds as]
+    helper ((w, ds):ws) p as =
+      LocToken w p ds "" : helper ws (updatePosString p ds) as

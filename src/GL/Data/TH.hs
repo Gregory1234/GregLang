@@ -10,7 +10,7 @@ genEnum n pf xs = do
   let kw = mkName n
   ys <-
     mapM
-      (\(a, b) -> do
+      (\(a, _) -> do
          let n = mkName (pf ++ a)
          return (NormalC n []))
       xs
