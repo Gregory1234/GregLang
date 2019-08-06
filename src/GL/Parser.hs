@@ -8,6 +8,7 @@ import Control.Monad
 import Data.Bool
 import Data.Functor.Identity
 import Data.Maybe
+import Data.Maybe.HT
 import Data.Tuple.HT
 import Data.Void
 import GL.Data.SyntaxTree
@@ -69,6 +70,11 @@ statParsers =
   , (True, SReturn <$> (tokenKeyword "return" *> exprParser))
   , (True, SBreak <$ tokenKeyword "break")
   , (True, SContinue <$ tokenKeyword "continue")
+  , ( True
+    , SLet <$> (tokenKeyword "let" *> tokenIdent) <*>
+      (tokenKeyword "=" *> exprParser))
+  , ( True
+    , uncurry SSet <$> P.try ((,) <$> tokenIdent <*> setHelper) <*> exprParser)
   , (True, SExpr <$> exprParser)
   , ( False
     , SIf <$> (tokenKeyword "if" *> exprParser) <*> statParser <*>
@@ -90,29 +96,68 @@ statParsers =
         SNoOp
         (P.choice (map snd statParsers) <* P.optional (tokenKeyword ";")) <*>
       (exprParser <* P.optional (tokenKeyword ";")) <*>
-      P.choice (map snd statParsers)
+      P.option SNoOp (P.choice (map snd statParsers))
+    setHelper =
+      tokenSatisfy
+        (\case
+           (TKeyword a) ->
+             toMaybe (show a `elem` map show setOps) (read $ show a)
+           _ -> Nothing)
+
+exprLevel :: Bool -> [ExprOp] -> Parser (GLExpr ()) -> Parser (GLExpr ())
+exprLevel b op e =
+  bool foldl (foldr . flip) b (fmap (GLExpr ()) . uncurry <$> EOp) <$> e <*>
+  P.many
+    ((,) <$>
+     tokenSatisfy
+       (\case
+          (TKeyword a) -> toMaybe (show a `elem` map show op) (read $ show a)
+          _ -> Nothing) <*>
+     e)
+
+exprLevels :: [[String]] -> Parser (GLExpr ()) -> Parser (GLExpr ())
+exprLevels = flip (foldr (exprLevel False . fmap read))
 
 exprParser :: Parser (GLExpr ())
 exprParser =
+  exprLevels
+    [ ["||"]
+    , ["^^"]
+    , ["&&"]
+    , ["|"]
+    , ["^"]
+    , ["&"]
+    , ["==", "!="]
+    , ["<", ">", "<=", ">="]
+    , ["+", "-"]
+    , ["*", "/", "%"]
+    ] $
   GLExpr () <$>
   P.choice
     [ P.label "int literal" $
-      EIntLit <$>
       tokenSatisfy
         (\case
-           (TIntLit a) -> Just a
+           (TIntLit a) -> Just (EIntLit a)
            _ -> Nothing)
     , P.label "float literal" $
-      EFloatLit <$>
       tokenSatisfy
         (\case
-           (TFloatLit a) -> Just a
+           (TFloatLit a) -> Just (EFloatLit a)
            _ -> Nothing)
     , P.label "string literal" $
-      EStringLit <$>
       tokenSatisfy
         (\case
-           (TStringLit a) -> Just a
+           (TStringLit a) -> Just (EStringLit a)
+           _ -> Nothing)
+    , P.label "char literal" $
+      tokenSatisfy
+        (\case
+           (TCharLit a) -> Just (ECharLit a)
+           _ -> Nothing)
+    , P.label "identifier" $
+      tokenSatisfy
+        (\case
+           (TIdent a) -> Just (EVar a)
            _ -> Nothing)
     , EParen <$> parens exprParser
     ]

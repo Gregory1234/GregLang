@@ -40,7 +40,7 @@ lexer "" _ = Right []
 lexer s@('\'':xs) p = do
   let (ds, nds) = helper xs ""
   let (as, s') = span isSpace nds
-  w <- maybeToEither ds $ readMaybe ('\'' : ds)
+  w <- maybeToEither ('\'' : ds) $ readMaybe ('\'' : ds)
   let p' = updatePosString p (('\'' : ds) ++ as)
   xs <- lexer s' p'
   return (LocToken w p ('\'' : ds) as : xs)
@@ -54,7 +54,7 @@ lexer s@('\'':xs) p = do
 lexer s@('"':xs) p = do
   let (ds, nds) = helper xs ""
   let (as, s') = span isSpace nds
-  w <- maybeToEither ds $ readMaybe ('"' : ds)
+  w <- maybeToEither ('"' : ds) $ readMaybe ('"' : ds)
   let p' = updatePosString p (('"' : ds) ++ as)
   xs <- lexer s' p'
   return (LocToken w p ('"' : ds) as : xs)

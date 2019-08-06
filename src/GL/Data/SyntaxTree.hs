@@ -2,12 +2,15 @@
 
 module GL.Data.SyntaxTree where
 
+import Data.Functor
 import Data.List
 import Data.Proxy
 import Data.Tree
 import GL.Data.TH
 import GL.Type
 import GL.Utils
+import qualified Text.ParserCombinators.ReadP as RP
+import Text.Read
 
 $(genEnum
     "SetOp"
@@ -26,6 +29,12 @@ $(genEnum
        , "BXorSet ^="
        , "Set ="
        ]))
+
+setOps :: [SetOp]
+setOps = [minBound .. maxBound]
+
+instance Read SetOp where
+  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) setOps
 
 $(genEnum
     "ExprOp"
@@ -50,7 +59,20 @@ $(genEnum
        , "BXor ^"
        ]))
 
+exprOps :: [ExprOp]
+exprOps = [minBound .. maxBound]
+
+instance Read ExprOp where
+  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) exprOps
+
 $(genEnum "ExprPrefixOp" "EPfxOp" (mkEnumList ["Not !", "Sub -"]))
+
+exprPrefixOps :: [ExprPrefixOp]
+exprPrefixOps = [minBound .. maxBound]
+
+instance Read ExprPrefixOp where
+  readPrec =
+    foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) exprPrefixOps
 
 data AST t =
   AST [GLImport] (GLClass t)
@@ -88,6 +110,7 @@ data UntypedExpr e
   | EStringLit String
   | EOp e ExprOp e
   | EPrefix ExprPrefixOp e
+  | EVar String
   | EParen e
 
 instance IsType t => Treeable (AST t) where
@@ -128,8 +151,10 @@ instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EIntLit i) = toTree $ show i
   toTree (EFloatLit f) = toTree $ show f
   toTree (EStringLit s) = toTree $ show s
+  toTree (ECharLit c) = toTree $ show c
   toTree (EOp e1 op e2) = Node ("operator " ++ show op) [toTree e1, toTree e2]
   toTree (EPrefix op e) = Node ("operator " ++ show op) [toTree e]
+  toTree (EVar e) = toTree e
   toTree (EParen e) = Node "parens" [toTree e]
 
 instance IsType t => Show (AST t) where
