@@ -165,18 +165,3 @@ instance Treeable e => Treeable (UntypedExpr e) where
 
 instance Show GLImport where
   show (GLImport s) = intercalate "." s
-
-instance IsType t => Show (GLClass t) where
-  show = treeShow
-
-instance IsType t => Show (GLFun t) where
-  show = treeShow
-
-instance IsType t => Show (GLStat t) where
-  show = treeShow
-
-instance IsType t => Show (GLExpr t) where
-  show = treeShow
-
-instance Treeable e => Show (UntypedExpr e) where
-  show = treeShow
