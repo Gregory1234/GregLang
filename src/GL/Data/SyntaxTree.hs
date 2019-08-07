@@ -117,7 +117,7 @@ data UntypedExpr e
   | EPrefix ExprPrefixOp e
   | EVar String
   | EParen e
-  deriving Show via (PrettyTree (GLExpr t))
+  deriving Show via (PrettyTree (UntypedExpr e))
 
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
