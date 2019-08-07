@@ -1,6 +1,6 @@
 module GL.Type where
 
-import Data.Tree
+import           Data.Tree
 
 class IsType t where
   showType :: t -> String -> String

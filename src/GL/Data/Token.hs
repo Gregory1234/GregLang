@@ -3,32 +3,30 @@
 
 module GL.Data.Token where
 
-import Control.Monad
-import Data.Char
-import Data.Function
-import Data.Functor
-import Data.List
-import qualified Data.List.NonEmpty as NE
-import Data.List.Split
-import Data.Proxy
-import GL.Data.TH
-import GL.Utils
-import qualified Text.Megaparsec as P
-import qualified Text.ParserCombinators.ReadP as RP
-import Text.Read
+import           Control.Monad
+import           Data.Char
+import           Data.Function
+import           Data.Functor
+import           Data.List
+import qualified Data.List.NonEmpty            as NE
+import           Data.List.Split
+import           Data.Proxy
+import           GL.Data.TH
+import           GL.Utils
+import qualified Text.Megaparsec               as P
+import qualified Text.ParserCombinators.ReadP  as RP
+import           Text.Read
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
-updatePosString p [] = p
-updatePosString p ('\t':xs) =
-  updatePosString
-    (p {P.sourceColumn = P.sourceColumn p <> P.defaultTabWidth})
-    xs
-updatePosString p ('\n':xs) =
-  updatePosString
-    (p {P.sourceLine = P.sourceLine p <> P.pos1, P.sourceColumn = P.pos1})
-    xs
-updatePosString p (_:xs) =
-  updatePosString (p {P.sourceColumn = P.sourceColumn p <> P.pos1}) xs
+updatePosString p []          = p
+updatePosString p ('\t' : xs) = updatePosString
+  (p { P.sourceColumn = P.sourceColumn p <> P.defaultTabWidth })
+  xs
+updatePosString p ('\n' : xs) = updatePosString
+  (p { P.sourceLine = P.sourceLine p <> P.pos1, P.sourceColumn = P.pos1 })
+  xs
+updatePosString p (_ : xs) =
+  updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
 
 $(genEnum
     "Keyword"
@@ -99,42 +97,41 @@ data Token
   deriving (Eq, Ord)
 
 spellToken :: Token -> String
-spellToken TBegin = ""
-spellToken (TIdent x) = x
+spellToken TBegin         = ""
+spellToken (TIdent     x) = x
 spellToken (TStringLit x) = show x
-spellToken (TIntLit x) = show x
-spellToken (TFloatLit x) = show x
-spellToken (TCharLit x) = show x
-spellToken (TKeyword x) = show x
+spellToken (TIntLit    x) = show x
+spellToken (TFloatLit  x) = show x
+spellToken (TCharLit   x) = show x
+spellToken (TKeyword   x) = show x
 
 instance Show Token where
-  show TBegin = "<begin>"
-  show (TIdent s) = "<ident " ++ show s ++ ">"
+  show TBegin         = "<begin>"
+  show (TIdent     s) = "<ident " ++ show s ++ ">"
   show (TStringLit s) = "<string " ++ show s ++ ">"
-  show (TIntLit s) = "<int " ++ show s ++ ">"
-  show (TFloatLit s) = "<float " ++ show s ++ ">"
-  show (TCharLit s) = "<char " ++ show s ++ ">"
-  show (TKeyword s) = show (show s)
+  show (TIntLit    s) = "<int " ++ show s ++ ">"
+  show (TFloatLit  s) = "<float " ++ show s ++ ">"
+  show (TCharLit   s) = "<char " ++ show s ++ ">"
+  show (TKeyword   s) = show (show s)
 
 instance Read Token where
-  readPrec =
-    foldl1
-      (<++)
-      [ do a <- readPrec
-           b <- lift RP.look
-           guard
-             (null b ||
-              not (isLetter $ head $ show a) || not (isAlphaNum $ head b))
-           return $ TKeyword a
-      , TStringLit <$> readPrec
-      , TIntLit <$> readPrec
-      , TFloatLit <$> readPrec
-      , TCharLit <$> readPrec
-      , TIdent <$>
-        lift
-          ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*>
-           RP.munch (\x -> isAlphaNum x || x == '_'))
-      ]
+  readPrec = foldl1
+    (<++)
+    [ do
+      a <- readPrec
+      b <- lift RP.look
+      guard
+        (null b || not (isLetter $ head $ show a) || not (isAlphaNum $ head b))
+      return $ TKeyword a
+    , TStringLit <$> readPrec
+    , TIntLit <$> readPrec
+    , TFloatLit <$> readPrec
+    , TCharLit <$> readPrec
+    , TIdent <$> lift
+      ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*> RP.munch
+        (\x -> isAlphaNum x || x == '_')
+      )
+    ]
 
 data LocToken =
   LocToken
@@ -147,10 +144,8 @@ data LocToken =
 
 instance Show LocToken where
   show LocToken {..} =
-    show tokenVal ++
-    " at " ++
-    P.sourcePosPretty tokenPos ++
-    " spelled " ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
+    show tokenVal ++ " at " ++ P.sourcePosPretty tokenPos ++ " spelled " ++ show
+      (tokenSpellingDuring ++ tokenSpellingAfter)
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
@@ -166,31 +161,29 @@ instance P.Stream [LocToken] where
   chunkToTokens Proxy = id
   chunkLength Proxy = length
   chunkEmpty Proxy = null
-  take1_ [] = Nothing
-  take1_ (t:ts) = Just (t, ts)
-  takeN_ n s
-    | n <= 0 = Just ([], s)
-    | null s = Nothing
-    | otherwise = Just (splitAt n s)
+  take1_ []       = Nothing
+  take1_ (t : ts) = Just (t, ts)
+  takeN_ n s | n <= 0    = Just ([], s)
+             | null s    = Nothing
+             | otherwise = Just (splitAt n s)
   takeWhile_ = span
   showTokens Proxy = intercalate ", " . NE.toList . fmap (show . tokenVal)
   reachOffset o P.PosState {..} =
     ( epos
     , line
-    , P.PosState
-        { P.pstateInput = rest
-        , P.pstateOffset = max pstateOffset o
-        , P.pstateSourcePos = epos
-        , P.pstateTabWidth = pstateTabWidth
-        , P.pstateLinePrefix = pstateLinePrefix
-        })
-    where
-      ofDiff = o - pstateOffset
-      (tok, rest) = splitAt ofDiff pstateInput
-      epos =
-        updatePosString pstateSourcePos $
-        tok >>= recreateToken' (P.unPos pstateTabWidth)
-      strs =
-        splitOn "\n" (pstateInput >>= recreateToken' (P.unPos pstateTabWidth))
-      line = strs !! min (length strs - 1) ind
-      ind = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos
+    , P.PosState { P.pstateInput      = rest
+                 , P.pstateOffset     = max pstateOffset o
+                 , P.pstateSourcePos  = epos
+                 , P.pstateTabWidth   = pstateTabWidth
+                 , P.pstateLinePrefix = pstateLinePrefix
+                 }
+    )
+   where
+    ofDiff      = o - pstateOffset
+    (tok, rest) = splitAt ofDiff pstateInput
+    epos        = updatePosString pstateSourcePos $ tok >>= recreateToken'
+      (P.unPos pstateTabWidth)
+    strs =
+      splitOn "\n" (pstateInput >>= recreateToken' (P.unPos pstateTabWidth))
+    line = strs !! min (length strs - 1) ind
+    ind  = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos

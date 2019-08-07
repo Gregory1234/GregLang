@@ -2,8 +2,8 @@
 
 module GL.Utils where
 
-import qualified Data.List.HT as L
-import Data.Tree
+import qualified Data.List.HT                  as L
+import           Data.Tree
 
 class Treeable a where
   toTree :: a -> Tree String
