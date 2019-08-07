@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving #-}
 
 module GL.Utils where
 
@@ -14,8 +14,18 @@ listToTree s = Node s . map toTree
 instance Treeable String where
   toTree s = Node s []
 
+instance Treeable (Tree String) where
+  toTree = id
+
 treeShow :: Treeable a => a -> String
 treeShow = drawTree . toTree
+
+newtype PrettyTree t =
+  PrettyTree t
+  deriving (Treeable)
+
+instance Treeable t => Show (PrettyTree t) where
+  show = treeShow
 
 replaceTabs :: Int -> String -> String
 replaceTabs tw = L.replace "\t" (replicate tw ' ')

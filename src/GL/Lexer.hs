@@ -1,3 +1,5 @@
+{-# LANGUAGE Strict #-}
+
 module GL.Lexer
   ( lexGregLang
   ) where

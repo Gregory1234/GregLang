@@ -1,3 +1,5 @@
+{-# LANGUAGE Strict #-}
+
 module Main where
 
 import Data.Char
@@ -21,6 +23,7 @@ instance Arbitrary Token where
         (((:) <$> elements identBegList <*> listOf (elements identMidList)) `suchThat`
          (`notElem` map show keywords))
       , TIntLit <$> (arbitrary `suchThat` (>= 0))
+      , TFloatLit <$> (arbitrary `suchThat` (>= 0))
       , TKeyword <$> arbitrary
       , TStringLit <$> arbitrary
       , TCharLit <$> arbitrary
@@ -43,6 +46,7 @@ instance Arbitrary Token where
         | isDigit x = ['1']
         | otherwise = ['a']
   shrink (TIntLit x) = TIntLit <$> filter (>= 0) (shrink x)
+  shrink (TFloatLit x) = TFloatLit <$> filter (>= 0) (shrink x)
   shrink (TKeyword x) = TKeyword <$> shrink x
   shrink (TCharLit x) = TCharLit <$> shrink x
   shrink (TStringLit "") = []
@@ -111,6 +115,6 @@ lexerReversable (TokenStream l) =
 tests :: TestTree
 tests = testGroup "Lexer" [mkTest "lexer reversable" lexerReversable]
   where
-    mkTest s = testProperty s . withMaxSuccess 100
+    mkTest s = testProperty s . withMaxSuccess 200
 
 main = defaultMain tests

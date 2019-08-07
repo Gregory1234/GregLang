@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, DerivingVia,
+  StandaloneDeriving #-}
 
 module GL.Data.SyntaxTree where
 
@@ -75,15 +76,18 @@ instance Read ExprPrefixOp where
 
 data AST t =
   AST [GLImport] (GLClass t)
+  deriving Show via (PrettyTree (AST t))
 
 newtype GLImport =
   GLImport [String]
 
 data GLClass t =
   GLClass String [GLFun t]
+  deriving Show via (PrettyTree (GLClass t))
 
 data GLFun t =
   GLFun t String [(t, String)] [GLStat t]
+  deriving Show via (PrettyTree (GLFun t))
 
 data GLStat t
   = SIf (GLExpr t) (GLStat t) (Maybe (GLStat t))
@@ -98,9 +102,11 @@ data GLStat t
   | SNoOp
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
+  deriving Show via (PrettyTree (GLStat t))
 
 data GLExpr t =
   GLExpr t (UntypedExpr (GLExpr t))
+  deriving Show via (PrettyTree (GLExpr t))
 
 data UntypedExpr e
   = EIntLit Integer
@@ -111,6 +117,7 @@ data UntypedExpr e
   | EPrefix ExprPrefixOp e
   | EVar String
   | EParen e
+  deriving Show via (PrettyTree (UntypedExpr e))
 
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
@@ -156,23 +163,5 @@ instance Treeable e => Treeable (UntypedExpr e) where
   toTree (EVar e) = toTree e
   toTree (EParen e) = Node "parens" [toTree e]
 
-instance IsType t => Show (AST t) where
-  show = treeShow
-
 instance Show GLImport where
   show (GLImport s) = intercalate "." s
-
-instance IsType t => Show (GLClass t) where
-  show = treeShow
-
-instance IsType t => Show (GLFun t) where
-  show = treeShow
-
-instance IsType t => Show (GLStat t) where
-  show = treeShow
-
-instance IsType t => Show (GLExpr t) where
-  show = treeShow
-
-instance Treeable e => Show (UntypedExpr e) where
-  show = treeShow

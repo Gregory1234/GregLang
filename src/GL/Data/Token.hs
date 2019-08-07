@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
-  TemplateHaskell #-}
+  TemplateHaskell, Strict #-}
 
 module GL.Data.Token where
 
