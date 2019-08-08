@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module GL.Type where
 
 import           Data.Tree
@@ -10,3 +12,10 @@ showTypeTree t (Node a b) = Node (showType t a) b
 
 instance IsType () where
   showType () = id
+
+instance IsType String where
+  showType s x = x ++ " : " ++ s
+
+instance (IsType a) => IsType (Maybe a) where
+  showType (Just a) = showType a
+  showType Nothing  = id

@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, TemplateHaskell, DerivingVia,
-  StandaloneDeriving #-}
+  StandaloneDeriving, DeriveFunctor #-}
 
 module GL.Data.SyntaxTree where
 
@@ -76,6 +76,7 @@ instance Read ExprPrefixOp where
 
 data AST t =
   AST [GLImport] (GLClass t)
+  deriving stock Functor
   deriving Show via (PrettyTree (AST t))
 
 newtype GLImport =
@@ -83,10 +84,12 @@ newtype GLImport =
 
 data GLClass t =
   GLClass String [GLFun t]
+  deriving stock Functor
   deriving Show via (PrettyTree (GLClass t))
 
 data GLFun t =
   GLFun t String [(t, String)] [GLStat t]
+  deriving stock Functor
   deriving Show via (PrettyTree (GLFun t))
 
 data GLStat t
@@ -94,7 +97,7 @@ data GLStat t
   | SFor (GLStat t) (GLExpr t) (GLStat t) (GLStat t)
   | SWhile (GLExpr t) (GLStat t)
   | SDoWhile (GLExpr t) (GLStat t)
-  | SLet String (GLExpr t)
+  | SLet t String (GLExpr t)
   | SSet String SetOp (GLExpr t)
   | SReturn (GLExpr t)
   | SBreak
@@ -102,22 +105,30 @@ data GLStat t
   | SNoOp
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
+  deriving stock Functor
   deriving Show via (PrettyTree (GLStat t))
 
 data GLExpr t =
-  GLExpr t (UntypedExpr (GLExpr t))
+    EIntLit t Integer
+  | EFloatLit t Double
+  | ECharLit t Char
+  | EStringLit t String
+  | EOp t (GLExpr t) ExprOp (GLExpr t)
+  | EPrefix t ExprPrefixOp (GLExpr t)
+  | EVar t String
+  | EParen t (GLExpr t)
+  deriving stock Functor
   deriving Show via (PrettyTree (GLExpr t))
 
-data UntypedExpr e
-  = EIntLit Integer
-  | EFloatLit Double
-  | ECharLit Char
-  | EStringLit String
-  | EOp e ExprOp e
-  | EPrefix ExprPrefixOp e
-  | EVar String
-  | EParen e
-  deriving Show via (PrettyTree (UntypedExpr e))
+changeExprType :: t -> GLExpr t -> GLExpr t
+changeExprType t (EIntLit    _ i) = EIntLit t i
+changeExprType t (EFloatLit  _ f) = EFloatLit t f
+changeExprType t (EStringLit _ s) = EStringLit t s
+changeExprType t (ECharLit   _ c) = ECharLit t c
+changeExprType t (EOp _ e1 op e2) = EOp t e1 op e2
+changeExprType t (EPrefix _ op e) = EPrefix t op e
+changeExprType t (EVar   _ n    ) = EVar t n
+changeExprType t (EParen _ e    ) = EParen t e
 
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
@@ -141,7 +152,7 @@ instance IsType t => Treeable (GLStat t) where
     Node "for" [toTree s1, toTree e, toTree s2, Node "do" [toTree s3]]
   toTree (SWhile   e s) = Node "while" [toTree e, Node "do" [toTree s]]
   toTree (SDoWhile e s) = Node "do" [toTree s, Node "while" [toTree e]]
-  toTree (SLet     n e) = Node ("let " ++ n ++ " =") [toTree e]
+  toTree (SLet t n  e ) = Node ("let " ++ showType t n ++ " =") [toTree e]
   toTree (SSet n op e ) = Node (n ++ " " ++ show op) [toTree e]
   toTree (SReturn e   ) = Node "return" [toTree e]
   toTree SBreak         = toTree "break"
@@ -151,17 +162,16 @@ instance IsType t => Treeable (GLStat t) where
   toTree (SExpr   e)    = toTree e
 
 instance IsType t => Treeable (GLExpr t) where
-  toTree (GLExpr t e) = showTypeTree t (toTree e)
-
-instance Treeable e => Treeable (UntypedExpr e) where
-  toTree (EIntLit    i) = toTree $ show i
-  toTree (EFloatLit  f) = toTree $ show f
-  toTree (EStringLit s) = toTree $ show s
-  toTree (ECharLit   c) = toTree $ show c
-  toTree (EOp e1 op e2) = Node ("operator " ++ show op) [toTree e1, toTree e2]
-  toTree (EPrefix op e) = Node ("operator " ++ show op) [toTree e]
-  toTree (EVar   e    ) = toTree e
-  toTree (EParen e    ) = Node "parens" [toTree e]
+  toTree (EIntLit    t i) = showTypeTree t $ toTree $ show i
+  toTree (EFloatLit  t f) = showTypeTree t $ toTree $ show f
+  toTree (EStringLit t s) = showTypeTree t $ toTree $ show s
+  toTree (ECharLit   t c) = showTypeTree t $ toTree $ show c
+  toTree (EOp t e1 op e2) =
+    showTypeTree t $ Node ("operator " ++ show op) [toTree e1, toTree e2]
+  toTree (EPrefix t op e) =
+    showTypeTree t $ Node ("operator " ++ show op) [toTree e]
+  toTree (EVar   t n) = showTypeTree t $ toTree n
+  toTree (EParen t e) = showTypeTree t $ Node "parens" [toTree e]
 
 instance Show GLImport where
   show (GLImport s) = intercalate "." s

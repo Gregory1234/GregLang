@@ -1,6 +1,6 @@
 
 class Main
 
-main{
-  for let x = 0 x<10 x+=1 ;
+main(a b c){
+  for let Int x = 0 x<10 x+=1 ;
 }
