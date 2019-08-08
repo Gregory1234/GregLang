@@ -89,6 +89,7 @@ instance Read Keyword where
 data Token
   = TBegin
   | TIdent String
+  | TTypeIdent String
   | TStringLit String
   | TIntLit Integer
   | TFloatLit Double
@@ -99,6 +100,7 @@ data Token
 spellToken :: Token -> String
 spellToken TBegin         = ""
 spellToken (TIdent     x) = x
+spellToken (TTypeIdent x) = x
 spellToken (TStringLit x) = show x
 spellToken (TIntLit    x) = show x
 spellToken (TFloatLit  x) = show x
@@ -108,6 +110,7 @@ spellToken (TKeyword   x) = show x
 instance Show Token where
   show TBegin         = "<begin>"
   show (TIdent     s) = "<ident " ++ show s ++ ">"
+  show (TTypeIdent s) = "<type ident " ++ show s ++ ">"
   show (TStringLit s) = "<string " ++ show s ++ ">"
   show (TIntLit    s) = "<int " ++ show s ++ ">"
   show (TFloatLit  s) = "<float " ++ show s ++ ">"
@@ -128,8 +131,12 @@ instance Read Token where
     , TFloatLit <$> readPrec
     , TCharLit <$> readPrec
     , TIdent <$> lift
-      ((:) <$> RP.satisfy (\x -> isAlpha x || x == '_') <*> RP.munch
-        (\x -> isAlphaNum x || x == '_')
+      ((:) <$> RP.satisfy ((isAlpha &&& isLower) ||| (== '_')) <*> RP.munch
+        (isAlphaNum ||| (== '_'))
+      )
+    , TTypeIdent <$> lift
+      ((:) <$> RP.satisfy (isAlpha &&& isUpper) <*> RP.munch
+        (isAlphaNum ||| (== '_'))
       )
     ]
 

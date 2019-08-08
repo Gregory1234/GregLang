@@ -13,6 +13,7 @@ import           Test.Tasty                     ( TestTree
                                                 )
 import           Test.Tasty.QuickCheck
 import qualified Text.Megaparsec               as P
+import           GL.Utils
 
 instance Arbitrary Keyword where
   arbitrary = elements [minBound .. maxBound]
@@ -23,6 +24,11 @@ instance Arbitrary Token where
   arbitrary = oneof
     [ TIdent
       <$> (((:) <$> elements identBegList <*> listOf (elements identMidList))
+          `suchThat` (`notElem` map show keywords)
+          )
+    , TTypeIdent
+      <$> (((:) <$> elements typeIdentBegList <*> listOf (elements identMidList)
+           )
           `suchThat` (`notElem` map show keywords)
           )
     , TIntLit <$> (arbitrary `suchThat` (>= 0))
@@ -41,6 +47,20 @@ instance Arbitrary Token where
       (x : init xs) : xs : (pure <$> shrinkChar x) ++ ((x :) <$> shrinkIdent xs)
     shrinkChar x | x == 'a'  = []
                  | x == 'A'  = ['a']
+                 | x == '1'  = ['a']
+                 | isUpper x = ['A']
+                 | isLower x = ['a']
+                 | isDigit x = ['1']
+                 | otherwise = ['a']
+
+  shrink (TTypeIdent x) = TTypeIdent <$> shrinkIdent x
+   where
+    shrinkIdent []  = []
+    shrinkIdent [x] = pure <$> shrinkChar x
+    shrinkIdent (x : xs) =
+      (x : init xs) : xs : (pure <$> shrinkChar x) ++ ((x :) <$> shrinkIdent xs)
+    shrinkChar x | x == 'a'  = []
+                 | x == 'A'  = []
                  | x == '1'  = ['a']
                  | isUpper x = ['A']
                  | isLower x = ['a']
@@ -68,9 +88,12 @@ arbitrarySpelling = return . spellToken
 
 spaceList = filter isSpace [minBound .. maxBound]
 
-identBegList = filter (\c -> isAlpha c || c == '_') [minBound .. maxBound]
+identBegList =
+  filter ((isAlpha &&& isLower) ||| (== '_')) [minBound .. maxBound]
 
-identMidList = filter (\c -> isAlphaNum c || c == '_') [minBound .. maxBound]
+typeIdentBegList = filter (isAlpha &&& isUpper) [minBound .. maxBound]
+
+identMidList = filter (isAlphaNum ||| (== '_')) [minBound .. maxBound]
 
 arbitraryTokenStream :: Int -> P.SourcePos -> Gen [LocToken]
 arbitraryTokenStream 0 _ = return []

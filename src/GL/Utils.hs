@@ -29,3 +29,12 @@ instance Treeable t => Show (PrettyTree t) where
 
 replaceTabs :: Int -> String -> String
 replaceTabs tw = L.replace "\t" (replicate tw ' ')
+
+appDb :: (a -> b -> c) -> (d -> a) -> (d -> b) -> d -> c
+appDb f g h x = f (g x) (h x)
+
+(|||) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(|||) = appDb (||)
+
+(&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(&&&) = appDb (&&)

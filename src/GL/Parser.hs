@@ -45,6 +45,13 @@ tokenIdent = P.label "<ident>" $ tokenSatisfy
     _          -> Nothing
   )
 
+tokenTypeIdent :: Parser String
+tokenTypeIdent = P.label "<type ident>" $ tokenSatisfy
+  (\case
+    (TTypeIdent s) -> Just s
+    _              -> Nothing
+  )
+
 tokenKeyword :: String -> Parser ()
 tokenKeyword = tokenExact . TKeyword . read
 
@@ -53,7 +60,7 @@ parser = AST [] <$> (tokenExact TBegin *> classParser <* P.eof)
 
 classParser :: Parser (Typed GLClass)
 classParser =
-  GLClass <$> (tokenKeyword "class" *> tokenIdent) <*> P.many funParser
+  GLClass <$> (tokenKeyword "class" *> tokenTypeIdent) <*> P.many funParser
 
 funParser :: Parser (Typed GLFun)
 funParser =
@@ -119,7 +126,7 @@ statParsers =
     )
 
 typeParser :: Parser String
-typeParser = tokenIdent
+typeParser = tokenTypeIdent
 
 typeParserClear :: Parser (Maybe String, String)
 typeParserClear =
