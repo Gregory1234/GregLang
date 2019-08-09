@@ -38,3 +38,8 @@ appDb f g h x = f (g x) (h x)
 
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = appDb (&&)
+
+lookupInv :: (Eq a) => a -> [(b, a)] -> Maybe b
+lookupInv _ [] = Nothing
+lookupInv k ((x, y) : xs) | k == y    = Just x
+                          | otherwise = lookupInv k xs

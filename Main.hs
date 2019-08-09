@@ -15,5 +15,7 @@ main = do
     (Left  err) -> putStrLn err
     (Right tok) -> print tok *> case parseGregLang inputFileArg tok of
       (Left  err) -> putStrLn err
-      (Right ast) -> print $ prepTypeCheck ast
+      (Right ast) -> print (prepTypeCheck ast) *> case typeCheck ast of
+        (Left  err ) -> putStrLn err
+        (Right ast') -> print ast'
   return ()

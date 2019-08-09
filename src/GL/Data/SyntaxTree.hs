@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, TemplateHaskell, DerivingVia,
-  StandaloneDeriving, DeriveFunctor #-}
+  StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 module GL.Data.SyntaxTree where
 
@@ -76,7 +76,7 @@ instance Read ExprPrefixOp where
 
 data AST t =
   AST [GLImport] (GLClass t)
-  deriving stock Functor
+  deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (AST t))
 
 newtype GLImport =
@@ -84,12 +84,12 @@ newtype GLImport =
 
 data GLClass t =
   GLClass String [GLFun t]
-  deriving stock Functor
+  deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLClass t))
 
 data GLFun t =
   GLFun t String [(t, String)] [GLStat t]
-  deriving stock Functor
+  deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLFun t))
 
 data GLStat t
@@ -105,7 +105,7 @@ data GLStat t
   | SNoOp
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
-  deriving stock Functor
+  deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLStat t))
 
 data GLExpr t =
@@ -117,7 +117,7 @@ data GLExpr t =
   | EPrefix t ExprPrefixOp (GLExpr t)
   | EVar t String
   | EParen t (GLExpr t)
-  deriving stock Functor
+  deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLExpr t))
 
 changeExprType :: t -> GLExpr t -> GLExpr t
@@ -129,6 +129,16 @@ changeExprType t (EOp _ e1 op e2) = EOp t e1 op e2
 changeExprType t (EPrefix _ op e) = EPrefix t op e
 changeExprType t (EVar   _ n    ) = EVar t n
 changeExprType t (EParen _ e    ) = EParen t e
+
+getExprType :: GLExpr t -> t
+getExprType (EIntLit    t _) = t
+getExprType (EFloatLit  t _) = t
+getExprType (EStringLit t _) = t
+getExprType (ECharLit   t _) = t
+getExprType (EOp t _ _ _   ) = t
+getExprType (EPrefix t _ _ ) = t
+getExprType (EVar   t _    ) = t
+getExprType (EParen t _    ) = t
 
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
