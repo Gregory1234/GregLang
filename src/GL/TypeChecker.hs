@@ -6,6 +6,7 @@ import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
 import           GL.Utils
 import           Data.Maybe
+import           Data.Functor
 
 data IType =
     NumberIType Integer
@@ -24,20 +25,18 @@ prepTypeCheck ast = evalState (mapM helper ast) 0
 data TypeConstraint = TypeEqual IType IType deriving Show
 
 typeInfer :: AST IType -> [TypeConstraint]
-typeInfer = execWriter . helperAST
+typeInfer = execWriter . (astClass . classFuns) helperFun
  where
+  eq :: IType -> IType -> Writer [TypeConstraint] ()
   eq a b = tell [TypeEqual a b]
   eqe e = eq (getExprType e) . getExprType
   eqn e = eq (getExprType e) . ConcreteIType
   eqt = eq . getExprType
   tqn t = eq t . ConcreteIType
-  helperAST (AST i c) = helperClass c
-  helperClass (GLClass n f) = mapM helperFun f
-  helperFun (GLFun t n a s) = helperStats t a s
+  helperFun f@(GLFun t n a s) = helperStats t a s $> f
   helperStats r c (SIf e s1 s2 : xs) =
     eqn e "Bool"
-      *> helperExpr c e
-      *> helperStats r c [s1]
+      *> helperStats r c [SExpr e, s1]
       *> helperStats r c (maybeToList s2)
       *> helperStats r c xs
   helperStats r c (SFor s1 e s2 s3 : xs) =
@@ -47,7 +46,9 @@ typeInfer = execWriter . helperAST
       *> helperStats r c [s1, s2]
       *> helperStats r c xs
   helperStats r c (SWhile e s : xs) =
-    eqn e "Bool" *> helperExpr c e *> helperStats r c [s] *> helperStats r c xs
+    eqn e "Bool" *> helperStats r c [SExpr e, s] *> helperStats r c xs
+  helperStats r c (SDoWhile e s : xs) =
+    eqn e "Bool" *> helperStats r c [s, SExpr e] *> helperStats r c xs
   helperStats r c (SLet t n e : xs) =
     eqt e t *> helperExpr c e *> helperStats r ((t, n) : c) xs
   helperStats r c (SSet n op e : xs) = helperExpr c e *> helperStats r c xs

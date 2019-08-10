@@ -11,6 +11,7 @@ import           GL.Type
 import           GL.Utils
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read
+import           Lens.Family2
 
 $(genEnum
     "SetOp"
@@ -120,26 +121,6 @@ data GLExpr t =
   deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLExpr t))
 
-changeExprType :: t -> GLExpr t -> GLExpr t
-changeExprType t (EIntLit    _ i) = EIntLit t i
-changeExprType t (EFloatLit  _ f) = EFloatLit t f
-changeExprType t (EStringLit _ s) = EStringLit t s
-changeExprType t (ECharLit   _ c) = ECharLit t c
-changeExprType t (EOp _ e1 op e2) = EOp t e1 op e2
-changeExprType t (EPrefix _ op e) = EPrefix t op e
-changeExprType t (EVar   _ n    ) = EVar t n
-changeExprType t (EParen _ e    ) = EParen t e
-
-getExprType :: GLExpr t -> t
-getExprType (EIntLit    t _) = t
-getExprType (EFloatLit  t _) = t
-getExprType (EStringLit t _) = t
-getExprType (ECharLit   t _) = t
-getExprType (EOp t _ _ _   ) = t
-getExprType (EPrefix t _ _ ) = t
-getExprType (EVar   t _    ) = t
-getExprType (EParen t _    ) = t
-
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
 
@@ -185,3 +166,44 @@ instance IsType t => Treeable (GLExpr t) where
 
 instance Show GLImport where
   show (GLImport s) = intercalate "." s
+
+astClass :: Lens (AST t) (AST t') (GLClass t) (GLClass t')
+astClass f (AST i c) = AST i <$> f c
+
+classFuns :: Traversal (GLClass t) (GLClass t') (GLFun t) (GLFun t')
+classFuns f (GLClass n fs) = GLClass n <$> traverse f fs
+
+funStats :: Traversal' (GLFun t) (GLStat t)
+funStats f (GLFun t n a s) = GLFun t n a <$> traverse f s
+
+statExprs :: Traversal' (GLStat t) (GLExpr t)
+statExprs f (SIf e s1 s2) =
+  SIf <$> f e <*> statExprs f s1 <*> traverse (statExprs f) s2
+statExprs f (SFor s1 e s2 s3) =
+  SFor <$> statExprs f s1 <*> f e <*> statExprs f s2 <*> statExprs f s3
+statExprs f (SWhile   e s) = SWhile <$> f e <*> statExprs f s
+statExprs f (SDoWhile e s) = SDoWhile <$> f e <*> statExprs f s
+statExprs f (SLet t n  e ) = SLet t n <$> f e
+statExprs f (SSet n op e ) = SSet n op <$> f e
+statExprs f (SReturn e   ) = SReturn <$> f e
+statExprs _ SBreak         = pure SBreak
+statExprs _ SContinue      = pure SContinue
+statExprs _ SNoOp          = pure SNoOp
+statExprs f (SBraces xs)   = SBraces <$> traverse (statExprs f) xs
+statExprs f (SExpr   e )   = SExpr <$> f e
+
+exprType1 :: Lens' (GLExpr t) t
+exprType1 f (EIntLit    t i) = flip EIntLit i <$> f t
+exprType1 f (EFloatLit  t n) = flip EFloatLit n <$> f t
+exprType1 f (EStringLit t s) = flip EStringLit s <$> f t
+exprType1 f (ECharLit   t c) = flip ECharLit c <$> f t
+exprType1 f (EOp t e1 op e2) = (\t' -> EOp t' e1 op e2) <$> f t
+exprType1 f (EPrefix t op e) = (\t' -> EPrefix t' op e) <$> f t
+exprType1 f (EVar   t n    ) = flip EVar n <$> f t
+exprType1 f (EParen t e    ) = flip EParen e <$> f t
+
+changeExprType :: t -> GLExpr t -> GLExpr t
+changeExprType = set exprType1
+
+getExprType :: GLExpr t -> t
+getExprType = view exprType1

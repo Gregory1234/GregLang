@@ -30,7 +30,8 @@ library
         utility-ht -any,
         split -any,
         template-haskell -any,
-        transformers -any
+        transformers -any,
+        lens-family -any
 
 executable GregLangCompiler
     main-is: Main.hs
