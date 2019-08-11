@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
-  TemplateHaskell, Strict #-}
+  TemplateHaskell, Strict, DerivingVia #-}
 
 module GL.Data.Token where
 
@@ -15,7 +15,35 @@ import           GL.Data.TH
 import           GL.Utils
 import qualified Text.Megaparsec               as P
 import qualified Text.ParserCombinators.ReadP  as RP
-import           Text.Read
+import           Text.Read               hiding ( Ident )
+import           Data.String
+
+newtype Ident =
+  Ident {unIdent :: String}
+  deriving stock (Eq,Ord)
+  deriving Treeable via String
+  deriving Show via ClearShow
+  deriving IsString via String
+
+instance Read Ident where
+  readPrec = Ident <$> lift
+    ((:) <$> RP.satisfy (isAlpha &&& isLower ||| (== '_')) <*> RP.munch
+      (isAlphaNum ||| (== '_'))
+    )
+
+newtype ClassName =
+  ClassName {unClassName :: String}
+  deriving stock (Eq,Ord)
+  deriving Treeable via String
+  deriving Show via ClearShow
+  deriving IsString via String
+
+
+instance Read ClassName where
+  readPrec = ClassName <$> lift
+    ((:) <$> RP.satisfy (isAlpha &&& isUpper) <*> RP.munch
+      (isAlphaNum ||| (== '_'))
+    )
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
 updatePosString p []          = p
@@ -88,8 +116,8 @@ instance Read Keyword where
 
 data Token
   = TBegin
-  | TIdent String
-  | TTypeIdent String
+  | TIdent Ident
+  | TTypeIdent ClassName
   | TStringLit String
   | TIntLit Integer
   | TFloatLit Double
@@ -99,8 +127,8 @@ data Token
 
 spellToken :: Token -> String
 spellToken TBegin         = ""
-spellToken (TIdent     x) = x
-spellToken (TTypeIdent x) = x
+spellToken (TIdent     x) = show x
+spellToken (TTypeIdent x) = show x
 spellToken (TStringLit x) = show x
 spellToken (TIntLit    x) = show x
 spellToken (TFloatLit  x) = show x
@@ -130,14 +158,8 @@ instance Read Token where
     , TIntLit <$> readPrec
     , TFloatLit <$> readPrec
     , TCharLit <$> readPrec
-    , TIdent <$> lift
-      ((:) <$> RP.satisfy ((isAlpha &&& isLower) ||| (== '_')) <*> RP.munch
-        (isAlphaNum ||| (== '_'))
-      )
-    , TTypeIdent <$> lift
-      ((:) <$> RP.satisfy (isAlpha &&& isUpper) <*> RP.munch
-        (isAlphaNum ||| (== '_'))
-      )
+    , TIdent <$> readPrec
+    , TTypeIdent <$> readPrec
     ]
 
 data LocToken =

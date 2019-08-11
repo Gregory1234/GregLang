@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, TemplateHaskell, DerivingVia,
-  StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+  DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 module GL.Data.SyntaxTree where
 
@@ -12,6 +12,7 @@ import           GL.Utils
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read
 import           Lens.Family2
+import           GL.Data.Token
 
 $(genEnum
     "SetOp"
@@ -84,12 +85,12 @@ newtype GLImport =
   GLImport [String]
 
 data GLClass t =
-  GLClass String [GLFun t]
+  GLClass ClassName [GLFun t]
   deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLClass t))
 
 data GLFun t =
-  GLFun t String [(t, String)] [GLStat t]
+  GLFun t Ident [(t, Ident)] [GLStat t]
   deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLFun t))
 
@@ -98,8 +99,8 @@ data GLStat t
   | SFor (GLStat t) (GLExpr t) (GLStat t) (GLStat t)
   | SWhile (GLExpr t) (GLStat t)
   | SDoWhile (GLExpr t) (GLStat t)
-  | SLet t String (GLExpr t)
-  | SSet String SetOp (GLExpr t)
+  | SLet t Ident (GLExpr t)
+  | SSet Ident SetOp (GLExpr t)
   | SReturn (GLExpr t)
   | SBreak
   | SContinue
@@ -116,7 +117,7 @@ data GLExpr t =
   | EStringLit t String
   | EOp t (GLExpr t) ExprOp (GLExpr t)
   | EPrefix t ExprPrefixOp (GLExpr t)
-  | EVar t String
+  | EVar t Ident
   | EParen t (GLExpr t)
   deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLExpr t))
@@ -128,12 +129,12 @@ instance Treeable GLImport where
   toTree = toTree . show
 
 instance IsType t => Treeable (GLClass t) where
-  toTree (GLClass n f) = listToTree ("class " ++ n) f
+  toTree (GLClass n f) = listToTree ("class " ++ show n) f
 
 instance IsType t => Treeable (GLFun t) where
-  toTree (GLFun t n as s) =
-    let (Node x y) = listToTree ("fun " ++ showType t n) s
-    in  Node x (listToTree "args" (uncurry showType <$> as) : y)
+  toTree (GLFun t n as s) = listToTree
+    ("fun " ++ showTypeShow t n)
+    (listToTree "args" (uncurry showTypeShow <$> as) : map toTree s)
 
 instance IsType t => Treeable (GLStat t) where
   toTree (SIf e s Nothing) = Node "if" [toTree e, Node "then" [toTree s]]
@@ -143,8 +144,8 @@ instance IsType t => Treeable (GLStat t) where
     Node "for" [toTree s1, toTree e, toTree s2, Node "do" [toTree s3]]
   toTree (SWhile   e s) = Node "while" [toTree e, Node "do" [toTree s]]
   toTree (SDoWhile e s) = Node "do" [toTree s, Node "while" [toTree e]]
-  toTree (SLet t n  e ) = Node ("let " ++ showType t n ++ " =") [toTree e]
-  toTree (SSet n op e ) = Node (n ++ " " ++ show op) [toTree e]
+  toTree (SLet t n  e ) = Node ("let " ++ showTypeShow t n ++ " =") [toTree e]
+  toTree (SSet n op e ) = Node (show n ++ " " ++ show op) [toTree e]
   toTree (SReturn e   ) = Node "return" [toTree e]
   toTree SBreak         = toTree "break"
   toTree SContinue      = toTree "continue"

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module GL.TypeChecker where
 
 import           GL.Type
@@ -10,13 +12,13 @@ import           Data.Functor
 
 data IType =
     NumberIType Integer
-  | ConcreteIType String deriving Show
+  | ConcreteIType GLType deriving Show
 
 instance IsType IType where
   showType (NumberIType   n) x = x ++ " : <" ++ show n ++ ">"
-  showType (ConcreteIType n) x = x ++ " : " ++ n
+  showType (ConcreteIType t) x = showType t x
 
-prepTypeCheck :: AST (Maybe String) -> AST IType
+prepTypeCheck :: AST (Maybe GLType) -> AST IType
 prepTypeCheck ast = evalState (mapM helper ast) 0
  where
   helper (Just t) = pure $ ConcreteIType t
@@ -29,29 +31,28 @@ typeInfer = execWriter . (astClass . classFuns) helperFun
  where
   eq :: IType -> IType -> Writer [TypeConstraint] ()
   eq a b = tell [TypeEqual a b]
-  eqe e = eq (getExprType e) . getExprType
   eqn e = eq (getExprType e) . ConcreteIType
   eqt = eq . getExprType
   tqn t = eq t . ConcreteIType
-  helperFun f@(GLFun t n a s) = helperStats t a s $> f
+  helperFun f@(GLFun t _ a s) = helperStats t a s $> f
   helperStats r c (SIf e s1 s2 : xs) =
-    eqn e "Bool"
+    eqn e (GLType "Bool")
       *> helperStats r c [SExpr e, s1]
       *> helperStats r c (maybeToList s2)
       *> helperStats r c xs
   helperStats r c (SFor s1 e s2 s3 : xs) =
-    eqn e "Bool"
+    eqn e (GLType "Bool")
       *> helperStats r c [s1, SExpr e]
       *> helperStats r c [s1, s3]
       *> helperStats r c [s1, s2]
       *> helperStats r c xs
   helperStats r c (SWhile e s : xs) =
-    eqn e "Bool" *> helperStats r c [SExpr e, s] *> helperStats r c xs
+    eqn e (GLType "Bool") *> helperStats r c [SExpr e, s] *> helperStats r c xs
   helperStats r c (SDoWhile e s : xs) =
-    eqn e "Bool" *> helperStats r c [s, SExpr e] *> helperStats r c xs
+    eqn e (GLType "Bool") *> helperStats r c [s, SExpr e] *> helperStats r c xs
   helperStats r c (SLet t n e : xs) =
     eqt e t *> helperExpr c e *> helperStats r ((t, n) : c) xs
-  helperStats r c (SSet n op e : xs) = helperExpr c e *> helperStats r c xs
+  helperStats r c (SSet _ _ e : xs) = helperExpr c e *> helperStats r c xs
   helperStats r c (SReturn e : xs) =
     eqt e r *> helperExpr c e *> helperStats r c xs
   helperStats r c (SBreak     : xs) = helperStats r c xs
@@ -60,16 +61,16 @@ typeInfer = execWriter . (astClass . classFuns) helperFun
   helperStats r c (SBraces ys : xs) = helperStats r c (ys ++ xs)
   helperStats r c (SExpr   e  : xs) = helperExpr c e *> helperStats r c xs
   helperStats _ _ []                = return ()
-  helperExpr c (EIntLit    t _) = tqn t "Int"
-  helperExpr c (EFloatLit  t _) = tqn t "Float"
-  helperExpr c (EStringLit t _) = tqn t "String"
-  helperExpr c (ECharLit   t _) = tqn t "Char"
-  helperExpr c (EOp t e1 op e2) = helperExpr c e1 *> helperExpr c e2
-  helperExpr c (EPrefix t op e) = helperExpr c e
+  helperExpr _ (EIntLit    t _) = tqn t (GLType "Int")
+  helperExpr _ (EFloatLit  t _) = tqn t (GLType "Float")
+  helperExpr _ (EStringLit t _) = tqn t (GLType "String")
+  helperExpr _ (ECharLit   t _) = tqn t (GLType "Char")
+  helperExpr c (EOp _ e1 _ e2 ) = helperExpr c e1 *> helperExpr c e2
+  helperExpr c (EPrefix _ _ e ) = helperExpr c e
   helperExpr c (EVar   t n    ) = let (Just t') = lookupInv n c in eq t t'
   helperExpr c (EParen t e    ) = eqt e t *> helperExpr c e
 
-solveConstraints :: AST IType -> [TypeConstraint] -> Either String (AST String)
+solveConstraints :: AST IType -> [TypeConstraint] -> Either String (AST GLType)
 solveConstraints a c = mapM helper a
  where
   helper (NumberIType   n) = solve n c
@@ -85,11 +86,11 @@ solveConstraints a c = mapM helper a
     | n == b    = Right a
     | otherwise = solve n xs
   solve n (TypeEqual (ConcreteIType a) (ConcreteIType b) : xs)
-    | a == b    = solve n xs
-    | otherwise = Left ("couldn't match types " ++ a ++ " and " ++ b)
+    | a == b = solve n xs
+    | otherwise = Left ("couldn't match types " ++ show a ++ " and " ++ show b)
   solve n [] = Left ("ambigous type " ++ show n)
 
-typeCheck :: AST (Maybe String) -> Either String (AST String)
+typeCheck :: AST (Maybe GLType) -> Either String (AST GLType)
 typeCheck a =
   let a' = prepTypeCheck a
       c  = typeInfer a'

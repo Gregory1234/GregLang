@@ -20,25 +20,13 @@ instance Arbitrary Keyword where
   shrink KIf = []
   shrink _   = [KIf]
 
-instance Arbitrary Token where
-  arbitrary = oneof
-    [ TIdent
+instance Arbitrary Ident where
+  arbitrary =
+    Ident
       <$> (((:) <$> elements identBegList <*> listOf (elements identMidList))
           `suchThat` (`notElem` map show keywords)
           )
-    , TTypeIdent
-      <$> (((:) <$> elements typeIdentBegList <*> listOf (elements identMidList)
-           )
-          `suchThat` (`notElem` map show keywords)
-          )
-    , TIntLit <$> (arbitrary `suchThat` (>= 0))
-    , TFloatLit <$> (arbitrary `suchThat` (>= 0))
-    , TKeyword <$> arbitrary
-    , TStringLit <$> arbitrary
-    , TCharLit <$> arbitrary
-    ]
-  shrink TBegin     = []
-  shrink (TIdent x) = TIdent
+  shrink (Ident x) = Ident
     <$> filter (`notElem` map show keywords) (shrinkIdent x)
    where
     shrinkIdent []  = []
@@ -53,7 +41,14 @@ instance Arbitrary Token where
                  | isDigit x = ['1']
                  | otherwise = ['a']
 
-  shrink (TTypeIdent x) = TTypeIdent <$> shrinkIdent x
+instance Arbitrary ClassName where
+  arbitrary =
+    ClassName
+      <$> (((:) <$> elements typeIdentBegList <*> listOf (elements identMidList)
+           )
+          `suchThat` (`notElem` map show keywords)
+          )
+  shrink (ClassName x) = ClassName <$> shrinkIdent x
    where
     shrinkIdent []  = []
     shrinkIdent [x] = pure <$> shrinkChar x
@@ -66,6 +61,20 @@ instance Arbitrary Token where
                  | isLower x = ['a']
                  | isDigit x = ['1']
                  | otherwise = ['a']
+
+instance Arbitrary Token where
+  arbitrary = oneof
+    [ TIdent <$> arbitrary
+    , TTypeIdent <$> arbitrary
+    , TIntLit <$> (arbitrary `suchThat` (>= 0))
+    , TFloatLit <$> (arbitrary `suchThat` (>= 0))
+    , TKeyword <$> arbitrary
+    , TStringLit <$> arbitrary
+    , TCharLit <$> arbitrary
+    ]
+  shrink TBegin                  = []
+  shrink (TIdent     x         ) = TIdent <$> shrink x
+  shrink (TTypeIdent x         ) = TTypeIdent <$> shrink x
   shrink (TIntLit    x         ) = TIntLit <$> filter (>= 0) (shrink x)
   shrink (TFloatLit  x         ) = TFloatLit <$> filter (>= 0) (shrink x)
   shrink (TKeyword   x         ) = TKeyword <$> shrink x
@@ -88,8 +97,7 @@ arbitrarySpelling = return . spellToken
 
 spaceList = filter isSpace [minBound .. maxBound]
 
-identBegList =
-  filter ((isAlpha &&& isLower) ||| (== '_')) [minBound .. maxBound]
+identBegList = filter (isAlpha &&& isLower ||| (== '_')) [minBound .. maxBound]
 
 typeIdentBegList = filter (isAlpha &&& isUpper) [minBound .. maxBound]
 

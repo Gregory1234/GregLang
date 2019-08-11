@@ -13,12 +13,13 @@ import           Data.Tuple.HT
 import           Data.Void
 import           GL.Data.SyntaxTree
 import           GL.Data.Token
+import           GL.Type
 import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( (<|>) )
 
 type Parser = P.Parsec Void [LocToken]
 
-type Typed x = x (Maybe String)
+type Typed x = x (Maybe GLType)
 
 (<&>) :: Applicative f => f a -> f b -> f (a, b)
 a <&> b = (,) <$> a <*> b
@@ -38,14 +39,14 @@ braces = bracketAny (tokenKeyword "{") (tokenKeyword "}")
 parens :: Parser a -> Parser a
 parens = bracketAny (tokenKeyword "(") (tokenKeyword ")")
 
-tokenIdent :: Parser String
+tokenIdent :: Parser Ident
 tokenIdent = P.label "<ident>" $ tokenSatisfy
   (\case
     (TIdent s) -> Just s
     _          -> Nothing
   )
 
-tokenTypeIdent :: Parser String
+tokenTypeIdent :: Parser ClassName
 tokenTypeIdent = P.label "<type ident>" $ tokenSatisfy
   (\case
     (TTypeIdent s) -> Just s
@@ -67,7 +68,7 @@ funParser =
   uncurry GLFun <$> typeParserClear <*> P.option [] parseArgs <*> braces
     (P.many statParser)
 
-parseArgs :: Parser [(Maybe String, String)]
+parseArgs :: Parser [(Maybe GLType, Ident)]
 parseArgs =
   parens (P.many typeParserClear <|> P.sepBy typeParserClear (tokenKeyword ","))
 
@@ -77,7 +78,7 @@ statParser =
     $ (SNoOp <$ tokenKeyword ";")
     : (uncurry (bool (<* P.optional (tokenKeyword ";")) id) <$> statParsers)
 
-statParsers :: [(Bool, Parser (GLStat (Maybe String)))]
+statParsers :: [(Bool, Parser (Typed GLStat))]
 statParsers =
   [ ( True
     , flip SDoWhile
@@ -125,10 +126,10 @@ statParsers =
       _            -> Nothing
     )
 
-typeParser :: Parser String
-typeParser = tokenTypeIdent
+typeParser :: Parser GLType
+typeParser = GLType <$> tokenTypeIdent
 
-typeParserClear :: Parser (Maybe String, String)
+typeParserClear :: Parser (Maybe GLType, Ident)
 typeParserClear =
   P.try ((Just <$> typeParser) <&> tokenIdent) <|> (Nothing, ) <$> tokenIdent
 
@@ -189,7 +190,7 @@ exprParser =
               (TCharLit a) -> Just (ECharLit Nothing a)
               _            -> Nothing
             )
-          , P.label "identifier" $ tokenSatisfy
+          , P.label "Ident" $ tokenSatisfy
             (\case
               (TIdent a) -> Just (EVar Nothing a)
               _          -> Nothing
@@ -197,68 +198,6 @@ exprParser =
           , EParen Nothing <$> parens exprParser
           ]
         )
-
-{-exprLevel :: Bool -> [ExprOp] -> Parser (GLExpr ()) -> Parser (GLExpr ())
-exprLevel b op e =
-  bool foldl (foldr . flip) b (fmap (GLExpr ()) . uncurry <$> EOp)
-    <$> e
-    <*> P.many
-          (   (,)
-          <$> tokenSatisfy
-                (\case
-                  (TKeyword a) ->
-                    toMaybe (show a `elem` map show op) (read $ show a)
-                  _ -> Nothing
-                )
-          <*> e
-          )
-
-exprLevels :: [[String]] -> Parser (GLExpr ()) -> Parser (GLExpr ())
-exprLevels = flip (foldr (exprLevel False . fmap read))
-
-exprParser :: Parser (GLExpr ())
-exprParser =
-  exprLevels
-      [ ["||"]
-      , ["^^"]
-      , ["&&"]
-      , ["|"]
-      , ["^"]
-      , ["&"]
-      , ["==", "!="]
-      , ["<", ">", "<=", ">="]
-      , ["+", "-"]
-      , ["*", "/", "%"]
-      ]
-    $   GLExpr ()
-    <$> P.choice
-          [ P.label "int literal" $ tokenSatisfy
-            (\case
-              (TIntLit a) -> Just (EIntLit a)
-              _           -> Nothing
-            )
-          , P.label "float literal" $ tokenSatisfy
-            (\case
-              (TFloatLit a) -> Just (EFloatLit a)
-              _             -> Nothing
-            )
-          , P.label "string literal" $ tokenSatisfy
-            (\case
-              (TStringLit a) -> Just (EStringLit a)
-              _              -> Nothing
-            )
-          , P.label "char literal" $ tokenSatisfy
-            (\case
-              (TCharLit a) -> Just (ECharLit a)
-              _            -> Nothing
-            )
-          , P.label "identifier" $ tokenSatisfy
-            (\case
-              (TIdent a) -> Just (EVar a)
-              _          -> Nothing
-            )
-          , EParen <$> parens exprParser
-          ]-}
 
 parseGregLang :: FilePath -> [LocToken] -> Either String (Typed AST)
 parseGregLang p t = case P.runParser parser p t of
