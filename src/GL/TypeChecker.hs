@@ -67,8 +67,9 @@ typeInfer = execWriter . (astClass . classFuns) helperFun
   helperExpr _ (ECharLit   t _) = tqn t (GLType "Char")
   helperExpr c (EOp _ e1 _ e2 ) = helperExpr c e1 *> helperExpr c e2
   helperExpr c (EPrefix _ _ e ) = helperExpr c e
-  helperExpr c (EVar   t n    ) = let (Just t') = lookupInv n c in eq t t'
-  helperExpr c (EParen t e    ) = eqt e t *> helperExpr c e
+  helperExpr c (EVar t d n xs) =
+    void $ traverse (helperExpr c) d *> traverse (helperExpr c) xs
+  helperExpr c (EParen t e) = eqt e t *> helperExpr c e
 
 solveConstraints :: AST IType -> [TypeConstraint] -> Either String (AST GLType)
 solveConstraints a c = mapM helper a

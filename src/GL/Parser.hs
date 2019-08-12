@@ -154,6 +154,18 @@ exprLevel b op e =
 exprLevels :: [[String]] -> Parser (Typed GLExpr) -> Parser (Typed GLExpr)
 exprLevels = flip (foldr (exprLevel False . fmap read))
 
+varParser :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
+varParser e = do
+  e1 <- e
+  ns <- P.many
+    (tokenKeyword "." *> tokenIdent <&> P.option
+      []
+      (parens (P.many exprParser <|> P.sepBy exprParser (tokenKeyword ",")))
+    )
+  return (foldl (\a (b, l) -> EVar Nothing (Just a) b l) e1 ns)
+
+
+
 exprParser :: Parser (Typed GLExpr)
 exprParser =
   exprLevels
@@ -169,7 +181,7 @@ exprParser =
       , ["*", "/", "%"]
       ]
     $ typeParserExpr
-        (P.choice
+        (varParser $ P.choice
           [ P.label "int literal" $ tokenSatisfy
             (\case
               (TIntLit a) -> Just (EIntLit Nothing a)
@@ -190,11 +202,17 @@ exprParser =
               (TCharLit a) -> Just (ECharLit Nothing a)
               _            -> Nothing
             )
-          , P.label "Ident" $ tokenSatisfy
-            (\case
-              (TIdent a) -> Just (EVar Nothing a)
-              _          -> Nothing
-            )
+          , P.label "Ident"
+          $   tokenSatisfy
+                (\case
+                  (TIdent a) -> Just (EVar Nothing Nothing a)
+                  _          -> Nothing
+                )
+          <*> P.option
+                []
+                (parens
+                  (P.many exprParser <|> P.sepBy exprParser (tokenKeyword ","))
+                )
           , EParen Nothing <$> parens exprParser
           ]
         )

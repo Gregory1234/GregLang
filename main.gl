@@ -2,5 +2,5 @@
 class Main
 
 Void main(){
-  for let Int x = 0 x<10 x+=1 ;
+  print( "hello" )
 }

@@ -117,7 +117,7 @@ data GLExpr t =
   | EStringLit t String
   | EOp t (GLExpr t) ExprOp (GLExpr t)
   | EPrefix t ExprPrefixOp (GLExpr t)
-  | EVar t Ident
+  | EVar t (Maybe (GLExpr t)) Ident [GLExpr t]
   | EParen t (GLExpr t)
   deriving stock (Functor,Foldable,Traversable)
   deriving Show via (PrettyTree (GLExpr t))
@@ -162,7 +162,13 @@ instance IsType t => Treeable (GLExpr t) where
     showTypeTree t $ Node ("operator " ++ show op) [toTree e1, toTree e2]
   toTree (EPrefix t op e) =
     showTypeTree t $ Node ("operator " ++ show op) [toTree e]
-  toTree (EVar   t n) = showTypeTree t $ toTree n
+  toTree (EVar t Nothing n []) = showTypeTree t $ toTree n
+  toTree (EVar t (Just d) n []) =
+    showTypeTree t $ Node (show n) [Node "of" [toTree d]]
+  toTree (EVar t Nothing n xs) =
+    showTypeTree t $ Node (show n) [listToTree "args" xs]
+  toTree (EVar t (Just d) n xs) =
+    showTypeTree t $ Node (show n) [Node "of" [toTree d], listToTree "args" xs]
   toTree (EParen t e) = showTypeTree t $ Node "parens" [toTree e]
 
 instance Show GLImport where
@@ -200,7 +206,7 @@ exprType1 f (EStringLit t s) = flip EStringLit s <$> f t
 exprType1 f (ECharLit   t c) = flip ECharLit c <$> f t
 exprType1 f (EOp t e1 op e2) = (\t' -> EOp t' e1 op e2) <$> f t
 exprType1 f (EPrefix t op e) = (\t' -> EPrefix t' op e) <$> f t
-exprType1 f (EVar   t n    ) = flip EVar n <$> f t
+exprType1 f (EVar t d n a  ) = (\t' -> EVar t' d n a) <$> f t
 exprType1 f (EParen t e    ) = flip EParen e <$> f t
 
 changeExprType :: t -> GLExpr t -> GLExpr t

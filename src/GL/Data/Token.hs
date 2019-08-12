@@ -106,6 +106,8 @@ $(genEnum
        , "BAnd &"
        , "BOr |"
        , "BXor ^"
+       , "Dot ."
+       , "Comma ,"
        ]))
 
 keywords :: [Keyword]
