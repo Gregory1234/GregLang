@@ -6,6 +6,8 @@ import qualified Data.List.HT                  as L
 import           Data.Tree
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read
+import           Data.List
+import           Data.Bifunctor
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -57,3 +59,8 @@ readPrecGather = RP.readP_to_S (RP.gather (readPrec_to_P readPrec 0))
 listToEither :: b -> [a] -> Either b a
 listToEither b []      = Left b
 listToEither _ (x : _) = Right x
+
+breakList :: Eq a => [a] -> [a] -> ([a], [a])
+breakList xs ys | xs `isPrefixOf` ys = ([], ys)
+breakList _  []                      = ([], [])
+breakList xs (y : ys)                = first (y :) $ breakList xs ys

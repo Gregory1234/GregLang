@@ -8,11 +8,18 @@ where
 import           Data.Char
 import           GL.Data.Token
 import qualified Text.Megaparsec               as P
-import           Text.Read
 import           GL.Utils
+import           Data.Bifunctor
 
 spanSpace :: String -> (String, String)
-spanSpace = span isSpace
+spanSpace xs@('\\' : '\\' : _) =
+  let (a, b) = break (== '\n') xs in first (a ++) (spanSpace b)
+spanSpace xs@('\\' : '*' : _) =
+  let (a, _ : _ : b) = breakList "*\\" xs
+  in  first ((a ++ "*\\") ++) (spanSpace b)
+spanSpace xs@(x : _) | isSpace x =
+  let (a, b) = span isSpace xs in first (a ++) (spanSpace b)
+spanSpace xs = ([], xs)
 
 lexGregLang :: FilePath -> String -> Either String [LocToken]
 lexGregLang fn str =

@@ -1,6 +1,7 @@
-
+\\A class called Main
 class Main
-
+\\The main function returning a void
+\\It takes no parameters
 Void main(){
-  print( "hello" )
+  print( \* this is a string literal -> *\ "hello" )
 }
