@@ -6,7 +6,6 @@ import           GL.Type
 import           GL.Data.SyntaxTree
 import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
-import           GL.Utils
 import           Data.Maybe
 import           Data.Functor
 

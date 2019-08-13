@@ -4,6 +4,8 @@ module GL.Utils where
 
 import qualified Data.List.HT                  as L
 import           Data.Tree
+import qualified Text.ParserCombinators.ReadP  as RP
+import           Text.Read
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -48,3 +50,10 @@ newtype ClearShow = ClearShow String
 
 instance Show ClearShow where
   show (ClearShow x) = x
+
+readPrecGather :: Read a => ReadS (String, a)
+readPrecGather = RP.readP_to_S (RP.gather (readPrec_to_P readPrec 0))
+
+listToEither :: b -> [a] -> Either b a
+listToEither b []      = Left b
+listToEither _ (x : _) = Right x
