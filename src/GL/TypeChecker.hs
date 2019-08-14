@@ -4,6 +4,8 @@ module GL.TypeChecker where
 
 import           GL.Type
 import           GL.Data.SyntaxTree
+import           GL.Data.SyntaxTree.Expr
+import           GL.Data.SyntaxTree.Stat
 import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
 import           Data.Maybe
@@ -26,7 +28,7 @@ prepTypeCheck ast = evalState (mapM helper ast) 0
 data TypeConstraint = TypeEqual IType IType deriving Show
 
 typeInfer :: AST IType -> [TypeConstraint]
-typeInfer = execWriter . (astClass . classFuns) helperFun
+typeInfer = execWriter . (astClass . classFuns . traverse) helperFun
  where
   eq :: IType -> IType -> Writer [TypeConstraint] ()
   eq a b = tell [TypeEqual a b]
@@ -66,7 +68,7 @@ typeInfer = execWriter . (astClass . classFuns) helperFun
   helperExpr _ (ECharLit   t _) = tqn t (GLType "Char")
   helperExpr c (EOp _ e1 _ e2 ) = helperExpr c e1 *> helperExpr c e2
   helperExpr c (EPrefix _ _ e ) = helperExpr c e
-  helperExpr c (EVar t d n xs) =
+  helperExpr c (EVar _ d _ xs) =
     void $ traverse (helperExpr c) d *> traverse (helperExpr c) xs
   helperExpr c (EParen t e) = eqt e t *> helperExpr c e
 

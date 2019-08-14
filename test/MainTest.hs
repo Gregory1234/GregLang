@@ -14,6 +14,7 @@ import           Test.Tasty                     ( TestTree
 import           Test.Tasty.QuickCheck
 import qualified Text.Megaparsec               as P
 import           GL.Utils
+import           GL.Data.Ident
 
 instance Arbitrary Keyword where
   arbitrary = elements [minBound .. maxBound]

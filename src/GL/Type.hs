@@ -3,8 +3,8 @@
 module GL.Type where
 
 import           Data.Tree
-import           GL.Data.Token
 import           GL.Utils
+import           GL.Data.Ident
 
 class IsType t where
   showType :: t -> String -> String

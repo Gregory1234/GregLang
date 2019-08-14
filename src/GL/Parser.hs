@@ -12,7 +12,10 @@ import           Data.Maybe.HT
 import           Data.Tuple.HT
 import           Data.Void
 import           GL.Data.SyntaxTree
+import           GL.Data.SyntaxTree.Expr
+import           GL.Data.SyntaxTree.Stat
 import           GL.Data.Token
+import           GL.Data.Ident
 import           GL.Type
 import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( (<|>) )
