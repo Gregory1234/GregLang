@@ -1,6 +1,12 @@
 {-# LANGUAGE FlexibleInstances, DerivingVia #-}
 
-module GL.Type where
+module GL.Type
+  ( IsType(..)
+  , showTypeTree
+  , showTypeShow
+  , GLType(..)
+  )
+where
 
 import           Data.Tree
 import           GL.Utils

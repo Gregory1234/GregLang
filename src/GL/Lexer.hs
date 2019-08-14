@@ -9,7 +9,6 @@ import           Data.Char
 import           GL.Data.Token
 import qualified Text.Megaparsec               as P
 import           GL.Utils
-import           Data.Bifunctor
 
 spanSpace :: String -> (String, String)
 spanSpace xs@('\\' : '\\' : _) =

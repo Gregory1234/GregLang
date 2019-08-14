@@ -1,16 +1,41 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
   DeriveTraversable #-}
 
-module GL.Data.SyntaxTree where
+module GL.Data.SyntaxTree
+  ( AST(..)
+  , GLImport(..)
+  , GLClass(..)
+  , GLFun(..)
+  , GLStat(..)
+  , GLExpr(..)
+  , ExprOp(..)
+  , ExprPrefixOp(..)
+  , SetOp(..)
+  , exprType1
+  , statExprs
+  , funType
+  , funName
+  , funArgs
+  , funStats
+  , className
+  , classFuns
+  , astImports
+  , astClass
+  , importPath
+  , exprOps
+  , exprPrefixOps
+  , setOps
+  )
+where
 
 
 import           GL.Utils
 import           GL.Type
 import           GL.Data.Ident
 import           GL.Data.SyntaxTree.Stat
+import           GL.Data.SyntaxTree.Expr
 import           Control.Lens
 import           Data.List
-import           Data.Tree
 
 instance IsType t => Treeable (AST t) where
   toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]

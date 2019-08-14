@@ -1,15 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module GL.TypeChecker where
+module GL.TypeChecker
+  ( typeCheck
+  , IType(..)
+  , prepTypeCheck
+  )
+where
 
 import           GL.Type
 import           GL.Data.SyntaxTree
-import           GL.Data.SyntaxTree.Expr
-import           GL.Data.SyntaxTree.Stat
 import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
 import           Data.Maybe
 import           Data.Functor
+import           Control.Lens                   ( view )
 
 data IType =
     NumberIType Integer
@@ -32,8 +36,8 @@ typeInfer = execWriter . (astClass . classFuns . traverse) helperFun
  where
   eq :: IType -> IType -> Writer [TypeConstraint] ()
   eq a b = tell [TypeEqual a b]
-  eqn e = eq (getExprType e) . ConcreteIType
-  eqt = eq . getExprType
+  eqn e = eq (view exprType1 e) . ConcreteIType
+  eqt = eq . view exprType1
   tqn t = eq t . ConcreteIType
   helperFun f@(GLFun t _ a s) = helperStats t a s $> f
   helperStats r c (SIf e s1 s2 : xs) =
@@ -72,8 +76,8 @@ typeInfer = execWriter . (astClass . classFuns . traverse) helperFun
     void $ traverse (helperExpr c) d *> traverse (helperExpr c) xs
   helperExpr c (EParen t e) = eqt e t *> helperExpr c e
 
-solveConstraints :: AST IType -> [TypeConstraint] -> Either String (AST GLType)
-solveConstraints a c = mapM helper a
+solveConstraints :: [TypeConstraint] -> AST IType -> Either String (AST GLType)
+solveConstraints c = mapM helper
  where
   helper (NumberIType   n) = solve n c
   helper (ConcreteIType n) = Right n
@@ -96,4 +100,4 @@ typeCheck :: AST (Maybe GLType) -> Either String (AST GLType)
 typeCheck a =
   let a' = prepTypeCheck a
       c  = typeInfer a'
-  in  solveConstraints a' c
+  in  solveConstraints c a'

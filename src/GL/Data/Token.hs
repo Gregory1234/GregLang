@@ -1,7 +1,17 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
   TemplateHaskell, Strict, DerivingVia #-}
 
-module GL.Data.Token where
+module GL.Data.Token
+  ( Keyword(..)
+  , keywords
+  , updatePosString
+  , Token(..)
+  , spellToken
+  , LocToken(..)
+  , recreateToken
+  , recreateToken'
+  )
+where
 
 import           Control.Monad
 import           Data.Char

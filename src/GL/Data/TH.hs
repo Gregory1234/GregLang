@@ -1,6 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module GL.Data.TH where
+module GL.Data.TH
+  ( genEnum
+  , mkEnumList
+  )
+where
 
 import           Data.Char
 import           Language.Haskell.TH
@@ -8,16 +12,10 @@ import           Language.Haskell.TH
 genEnum :: String -> String -> [(String, String)] -> Q [Dec]
 genEnum n pf xs = do
   let kw = mkName n
-  ys <- mapM
-    (\(a, _) -> do
-      let n = mkName (pf ++ a)
-      return (NormalC n [])
-    )
-    xs
+  ys  <- mapM (\(a, _) -> return (NormalC (mkName (pf ++ a)) [])) xs
   ins <- mapM
-    (\(a, b) -> do
-      let n = mkName (pf ++ a)
-      return (Clause [ConP n []] (NormalB (LitE (StringL b))) [])
+    (\(a, b) -> return
+      (Clause [ConP (mkName (pf ++ a)) []] (NormalB (LitE (StringL b))) [])
     )
     xs
   return

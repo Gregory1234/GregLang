@@ -1,6 +1,14 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
   DeriveTraversable #-}
-module GL.Data.SyntaxTree.Expr where
+module GL.Data.SyntaxTree.Expr
+  ( GLExpr(..)
+  , ExprOp(..)
+  , ExprPrefixOp(..)
+  , exprType1
+  , exprOps
+  , exprPrefixOps
+  )
+where
 
 import           GL.Utils
 import           GL.Type
@@ -8,33 +16,7 @@ import           GL.Data.Ident
 import           GL.Data.TH
 import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP
-import           Control.Lens
-import           Data.Tree
-import           Data.Functor
-
-$(genEnum
-    "SetOp"
-    "Op"
-    (mkEnumList
-       [ "AddSet +="
-       , "SubSet -="
-       , "MulSet *="
-       , "DivSet /="
-       , "ModSet %="
-       , "AndSet &&="
-       , "OrSet ||="
-       , "XorSet ^^="
-       , "BAndSet &="
-       , "BOrSet |="
-       , "BXorSet ^="
-       , "Set ="
-       ]))
-
-setOps :: [SetOp]
-setOps = [minBound .. maxBound]
-
-instance Read SetOp where
-  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) setOps
+import           Control.Lens                   ( Lens' )
 
 $(genEnum
     "ExprOp"
@@ -96,12 +78,6 @@ exprType1 f (EPrefix t op e) = (\t' -> EPrefix t' op e) <$> f t
 exprType1 f (EVar t d n a  ) = (\t' -> EVar t' d n a) <$> f t
 exprType1 f (EParen t e    ) = flip EParen e <$> f t
 
-changeExprType :: t -> GLExpr t -> GLExpr t
-changeExprType = set exprType1
-
-getExprType :: GLExpr t -> t
-getExprType = view exprType1
-
 instance IsType t => Treeable (GLExpr t) where
   toTree (EIntLit    t i) = showTypeTree t $ toTree $ show i
   toTree (EFloatLit  t f) = showTypeTree t $ toTree $ show f
@@ -119,6 +95,3 @@ instance IsType t => Treeable (GLExpr t) where
   toTree (EVar t (Just d) n xs) =
     showTypeTree t $ Node (show n) [Node "of" [toTree d], listToTree "args" xs]
   toTree (EParen t e) = showTypeTree t $ Node "parens" [toTree e]
-
-
-makePrisms ''GLExpr

@@ -1,5 +1,9 @@
 {-# LANGUAGE DerivingVia #-}
-module GL.Data.Ident where
+module GL.Data.Ident
+  ( Ident(..)
+  , ClassName(..)
+  )
+where
 
 import           Data.Char
 import           GL.Utils

@@ -12,20 +12,17 @@ import           Data.Maybe.HT
 import           Data.Tuple.HT
 import           Data.Void
 import           GL.Data.SyntaxTree
-import           GL.Data.SyntaxTree.Expr
-import           GL.Data.SyntaxTree.Stat
 import           GL.Data.Token
 import           GL.Data.Ident
 import           GL.Type
 import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( (<|>) )
+import           Control.Lens                   ( set )
+import           GL.Utils
 
 type Parser = P.Parsec Void [LocToken]
 
 type Typed x = x (Maybe GLType)
-
-(<&>) :: Applicative f => f a -> f b -> f (a, b)
-a <&> b = (,) <$> a <*> b
 
 tokenSatisfy :: (Token -> Maybe a) -> Parser a
 tokenSatisfy f = fromJust . f . tokenVal <$> P.satisfy (isJust . f . tokenVal)
@@ -138,7 +135,7 @@ typeParserClear =
 
 typeParserExpr :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
 typeParserExpr e =
-  uncurry changeExprType
+  uncurry (set exprType1)
     <$> (P.try ((Just <$> parens typeParser) <&> e) <|> (Nothing, ) <$> e)
 
 exprLevel :: Bool -> [ExprOp] -> Parser (Typed GLExpr) -> Parser (Typed GLExpr)

@@ -24,7 +24,8 @@ library
         GL.TypeChecker
     hs-source-dirs: src
     default-language: Haskell2010
-    ghc-options: -Wredundant-constraints -Widentities -W
+    ghc-options: -Wredundant-constraints -Widentities
+                 -Wmissing-export-lists -Wall
     build-depends:
         base ^>=4.12.0.0,
         parseargs -any,

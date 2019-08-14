@@ -1,13 +1,46 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
   DeriveTraversable #-}
-module GL.Data.SyntaxTree.Stat where
+module GL.Data.SyntaxTree.Stat
+  ( GLStat(..)
+  , SetOp(..)
+  , statExprs
+  , setOps
+  )
+where
 
 import           GL.Utils
 import           GL.Type
 import           GL.Data.Ident
 import           GL.Data.SyntaxTree.Expr
-import           Control.Lens
-import           Data.Tree
+import           Control.Lens                   ( Traversal' )
+import           GL.Data.TH
+import           Text.Read
+import qualified Text.ParserCombinators.ReadP  as RP
+
+$(genEnum
+    "SetOp"
+    "Op"
+    (mkEnumList
+       [ "AddSet +="
+       , "SubSet -="
+       , "MulSet *="
+       , "DivSet /="
+       , "ModSet %="
+       , "AndSet &&="
+       , "OrSet ||="
+       , "XorSet ^^="
+       , "BAndSet &="
+       , "BOrSet |="
+       , "BXorSet ^="
+       , "Set ="
+       ]))
+
+setOps :: [SetOp]
+setOps = [minBound .. maxBound]
+
+instance Read SetOp where
+  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) setOps
+
 
 data GLStat t
   = SIf (GLExpr t) (GLStat t) (Maybe (GLStat t))
@@ -57,5 +90,3 @@ instance IsType t => Treeable (GLStat t) where
   toTree SNoOp          = toTree "no op"
   toTree (SBraces s)    = listToTree "braces" s
   toTree (SExpr   e)    = toTree e
-
-makePrisms ''GLStat

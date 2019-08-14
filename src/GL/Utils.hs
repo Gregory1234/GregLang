@@ -1,6 +1,27 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving #-}
 
-module GL.Utils where
+module GL.Utils
+  ( Tree(..)
+  , first
+  , second
+  , on
+  , ($>)
+  , Treeable(..)
+  , listToTree
+  , treeShow
+  , PrettyTree(..)
+  , replaceTabs
+  , appDb
+  , (|||)
+  , (&&&)
+  , lookupInv
+  , ClearShow(..)
+  , readPrecGather
+  , listToEither
+  , breakList
+  , (<&>)
+  )
+where
 
 import qualified Data.List.HT                  as L
 import           Data.Tree
@@ -8,6 +29,8 @@ import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read
 import           Data.List
 import           Data.Bifunctor
+import           Data.Function
+import           Data.Functor                   ( ($>) )
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -64,3 +87,6 @@ breakList :: Eq a => [a] -> [a] -> ([a], [a])
 breakList xs ys | xs `isPrefixOf` ys = ([], ys)
 breakList _  []                      = ([], [])
 breakList xs (y : ys)                = first (y :) $ breakList xs ys
+
+(<&>) :: Applicative f => f a -> f b -> f (a, b)
+a <&> b = (,) <$> a <*> b
