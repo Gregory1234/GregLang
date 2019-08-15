@@ -1,9 +1,8 @@
 {-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
-  TemplateHaskell, Strict, DerivingVia #-}
+   Strict, DerivingVia, GeneralizedNewtypeDeriving #-}
 
 module GL.Data.Token
   ( Keyword(..)
-  , keywords
   , updatePosString
   , Token(..)
   , spellToken
@@ -16,17 +15,17 @@ where
 import           Control.Monad
 import           Data.Char
 import           Data.Function
-import           Data.Functor
 import           Data.List
 import qualified Data.List.NonEmpty            as NE
 import           Data.List.Split
 import           Data.Proxy
-import           GL.Data.TH
 import           GL.Utils
 import qualified Text.Megaparsec               as P
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
 import           GL.Data.Ident
+import           Data.String
+import           Data.Maybe
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
 updatePosString p []          = p
@@ -39,65 +38,31 @@ updatePosString p ('\n' : xs) = updatePosString
 updatePosString p (_ : xs) =
   updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
 
-$(genEnum
-    "Keyword"
-    "K"
-    (mkEnumList
-       [ "Class"
-       , "If"
-       , "Else"
-       , "While"
-       , "Do"
-       , "For"
-       , "Let"
-       , "Return"
-       , "Import"
-       , "Break"
-       , "Continue"
-       , "BraceOp {"
-       , "BraceCl }"
-       , "ParenOp ("
-       , "ParenCl )"
-       , "Semicolon ;"
-       , "Equal =="
-       , "LessEq <="
-       , "GreaterEq >="
-       , "NotEq !="
-       , "AddSet +="
-       , "SubSet -="
-       , "MulSet *="
-       , "DivSet /="
-       , "ModSet %="
-       , "AndSet &&="
-       , "OrSet ||="
-       , "XorSet ^^="
-       , "BAndSet &="
-       , "BOrSet |="
-       , "BXorSet ^="
-       , "Set ="
-       , "Less <"
-       , "Greater >"
-       , "Not !"
-       , "Add +"
-       , "Sub -"
-       , "Mul *"
-       , "Div /"
-       , "Mod %"
-       , "And &&"
-       , "Or ||"
-       , "Xor ^^"
-       , "BAnd &"
-       , "BOr |"
-       , "BXor ^"
-       , "Dot ."
-       , "Comma ,"
-       ]))
+newtype Keyword = Keyword { unKeyword :: String }
+  deriving newtype (Eq, Ord, IsString)
+  deriving Show via ClearShow
 
-keywords :: [Keyword]
-keywords = [minBound .. maxBound]
+keywords :: [String]
+keywords = concat
+  [ ["class", "if", "else", "while", "do"]
+  , ["for", "let", "return", "import", "break", "continue"]
+  , ["{", "}", "(", ")", ";", ".", ","]
+  , ["==", "<=", ">=", "!=", "+=", "-=", "*=", "/=", "%="]
+  , ["&&=", "||=", "^^=", "&=", "|=", "^="]
+  , ["=", "<", ">", "!", "+", "-", "*", "/", "%"]
+  , ["&&", "||", "^^", "&", "|", "^"]
+  ]
 
 instance Read Keyword where
-  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) keywords
+  readPrec = Keyword <$> foldl1 (<++) (map (lift . RP.string) keywords)
+
+instance Enum Keyword where
+  toEnum   = Keyword . (keywords !!)
+  fromEnum = fromJust . (`elemIndex` keywords) . unKeyword
+
+instance Bounded Keyword where
+  minBound = Keyword (head keywords)
+  maxBound = Keyword (last keywords)
 
 data Token
   = TBegin

@@ -18,17 +18,19 @@ import           GL.Data.Ident
 
 instance Arbitrary Keyword where
   arbitrary = elements [minBound .. maxBound]
-  shrink KIf = []
-  shrink _   = [KIf]
+  shrink (Keyword "if") = []
+  shrink _              = [Keyword "if"]
+
+keywords :: [String]
+keywords = map show ([minBound .. maxBound] :: [Keyword])
 
 instance Arbitrary Ident where
   arbitrary =
     Ident
       <$> (((:) <$> elements identBegList <*> listOf (elements identMidList))
-          `suchThat` (`notElem` map show keywords)
+          `suchThat` (`notElem` keywords)
           )
-  shrink (Ident x) = Ident
-    <$> filter (`notElem` map show keywords) (shrinkIdent x)
+  shrink (Ident x) = Ident <$> filter (`notElem` keywords) (shrinkIdent x)
    where
     shrinkIdent []  = []
     shrinkIdent [x] = pure <$> shrinkChar x

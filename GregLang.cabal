@@ -19,7 +19,6 @@ library
         GL.Data.SyntaxTree.Stat
         GL.Parser
         GL.Type
-        GL.Data.TH
         GL.Data.Ident
         GL.TypeChecker
     hs-source-dirs: src

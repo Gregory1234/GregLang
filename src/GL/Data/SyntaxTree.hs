@@ -22,9 +22,6 @@ module GL.Data.SyntaxTree
   , astImports
   , astClass
   , importPath
-  , exprOps
-  , exprPrefixOps
-  , setOps
   )
 where
 

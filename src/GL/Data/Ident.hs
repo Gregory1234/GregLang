@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingVia, GeneralizedNewtypeDeriving #-}
 module GL.Data.Ident
   ( Ident(..)
   , ClassName(..)
@@ -13,10 +13,8 @@ import           Data.String
 
 newtype Ident =
   Ident { identString :: String }
-  deriving stock (Eq,Ord)
-  deriving Treeable via String
+  deriving newtype (Eq, Ord, IsString, Treeable)
   deriving Show via ClearShow
-  deriving IsString via String
 
 instance Read Ident where
   readPrec = Ident <$> lift
@@ -26,10 +24,8 @@ instance Read Ident where
 
 newtype ClassName =
   ClassName { classNameString :: String }
-  deriving stock (Eq,Ord)
-  deriving Treeable via String
+  deriving newtype (Eq, Ord, IsString, Treeable)
   deriving Show via ClearShow
-  deriving IsString via String
 
 
 instance Read ClassName where

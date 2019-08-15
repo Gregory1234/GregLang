@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, TupleSections #-}
+{-# LANGUAGE LambdaCase, TupleSections, OverloadedStrings #-}
 
 module GL.Parser
   ( parseGregLang
@@ -19,6 +19,7 @@ import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( (<|>) )
 import           Control.Lens                   ( set )
 import           GL.Utils
+import           Text.Read                      ( readMaybe )
 
 type Parser = P.Parsec Void [LocToken]
 
@@ -53,8 +54,8 @@ tokenTypeIdent = P.label "<type ident>" $ tokenSatisfy
     _              -> Nothing
   )
 
-tokenKeyword :: String -> Parser ()
-tokenKeyword = tokenExact . TKeyword . read
+tokenKeyword :: Keyword -> Parser ()
+tokenKeyword = tokenExact . TKeyword
 
 parser :: Parser (Typed AST)
 parser = AST [] <$> (tokenExact TBegin *> classParser <* P.eof)
@@ -122,7 +123,7 @@ statParsers =
       <*> P.option SNoOp (P.choice (map snd statParsers))
   setHelper = tokenSatisfy
     (\case
-      (TKeyword a) -> toMaybe (show a `elem` map show setOps) (read $ show a)
+      (TKeyword a) -> readMaybe $ show a
       _            -> Nothing
     )
 
@@ -151,8 +152,8 @@ exprLevel b op e =
     <*> e
     )
 
-exprLevels :: [[String]] -> Parser (Typed GLExpr) -> Parser (Typed GLExpr)
-exprLevels = flip (foldr (exprLevel False . fmap read))
+exprLevels :: [[ExprOp]] -> Parser (Typed GLExpr) -> Parser (Typed GLExpr)
+exprLevels = flip (foldr (exprLevel False))
 
 varParser :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
 varParser e = do

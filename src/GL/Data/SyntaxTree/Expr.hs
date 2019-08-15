@@ -1,60 +1,63 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
-  DeriveTraversable #-}
+{-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
+  GeneralizedNewtypeDeriving #-}
 module GL.Data.SyntaxTree.Expr
   ( GLExpr(..)
   , ExprOp(..)
   , ExprPrefixOp(..)
   , exprType1
-  , exprOps
-  , exprPrefixOps
   )
 where
 
 import           GL.Utils
 import           GL.Type
 import           GL.Data.Ident
-import           GL.Data.TH
 import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Control.Lens                   ( Lens' )
+import           Data.String
+import           Data.List
+import           Data.Maybe
 
-$(genEnum
-    "ExprOp"
-    "EOp"
-    (mkEnumList
-       [ "Equal =="
-       , "LessEq <="
-       , "GreaterEq >="
-       , "NotEq !="
-       , "Less <"
-       , "Greater >"
-       , "Add +"
-       , "Sub -"
-       , "Mul *"
-       , "Div /"
-       , "Mod %"
-       , "And &&"
-       , "Or ||"
-       , "Xor ^^"
-       , "BAnd &"
-       , "BOr |"
-       , "BXor ^"
-       ]))
+newtype ExprOp = ExprOp { unExprOp :: String }
+  deriving newtype (Eq, Ord, IsString)
+  deriving Show via ClearShow
 
-exprOps :: [ExprOp]
-exprOps = [minBound .. maxBound]
+exprOps :: [String]
+exprOps = concat
+  [ ["==", "<=", ">=", "!=", "<", ">"]
+  , ["+", "-", "*", "/", "%"]
+  , ["&&", "||", "^^", "&", "|", "^"]
+  ]
 
 instance Read ExprOp where
-  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) exprOps
+  readPrec = ExprOp <$> foldl1 (<++) (map (lift . RP.string) exprOps)
 
-$(genEnum "ExprPrefixOp" "EPfxOp" (mkEnumList ["Not !", "Sub -"]))
+instance Enum ExprOp where
+  toEnum   = ExprOp . (exprOps !!)
+  fromEnum = fromJust . (`elemIndex` exprOps) . unExprOp
 
-exprPrefixOps :: [ExprPrefixOp]
-exprPrefixOps = [minBound .. maxBound]
+instance Bounded ExprOp where
+  minBound = ExprOp (head exprOps)
+  maxBound = ExprOp (last exprOps)
+
+newtype ExprPrefixOp = ExprPrefixOp { unExprPrefixOp :: String }
+  deriving newtype (Eq, Ord, IsString)
+  deriving Show via ClearShow
+
+exprPrefixOps :: [String]
+exprPrefixOps = ["!", "-"]
 
 instance Read ExprPrefixOp where
   readPrec =
-    foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) exprPrefixOps
+    ExprPrefixOp <$> foldl1 (<++) (map (lift . RP.string) exprPrefixOps)
+
+instance Enum ExprPrefixOp where
+  toEnum   = ExprPrefixOp . (exprPrefixOps !!)
+  fromEnum = fromJust . (`elemIndex` exprPrefixOps) . unExprPrefixOp
+
+instance Bounded ExprPrefixOp where
+  minBound = ExprPrefixOp (head exprPrefixOps)
+  maxBound = ExprPrefixOp (last exprPrefixOps)
 
 data GLExpr t =
     EIntLit t Integer

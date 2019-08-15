@@ -1,10 +1,9 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
-  DeriveTraversable #-}
+{-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
+  GeneralizedNewtypeDeriving #-}
 module GL.Data.SyntaxTree.Stat
   ( GLStat(..)
   , SetOp(..)
   , statExprs
-  , setOps
   )
 where
 
@@ -13,34 +12,30 @@ import           GL.Type
 import           GL.Data.Ident
 import           GL.Data.SyntaxTree.Expr
 import           Control.Lens                   ( Traversal' )
-import           GL.Data.TH
 import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP
+import           Data.String
+import           Data.List
+import           Data.Maybe
 
-$(genEnum
-    "SetOp"
-    "Op"
-    (mkEnumList
-       [ "AddSet +="
-       , "SubSet -="
-       , "MulSet *="
-       , "DivSet /="
-       , "ModSet %="
-       , "AndSet &&="
-       , "OrSet ||="
-       , "XorSet ^^="
-       , "BAndSet &="
-       , "BOrSet |="
-       , "BXorSet ^="
-       , "Set ="
-       ]))
+newtype SetOp = SetOp { unSetOp :: String }
+  deriving newtype (Eq, Ord, IsString)
+  deriving Show via ClearShow
 
-setOps :: [SetOp]
-setOps = [minBound .. maxBound]
+setOps :: [String]
+setOps =
+  ["+=", "-=", "*=", "/=", "%=", "&&=", "||=", "^^=", "&=", "|=", "^=", "="]
 
 instance Read SetOp where
-  readPrec = foldl1 (<++) $ map (\x -> lift (RP.string (show x)) $> x) setOps
+  readPrec = SetOp <$> foldl1 (<++) (map (lift . RP.string) setOps)
 
+instance Enum SetOp where
+  toEnum   = SetOp . (setOps !!)
+  fromEnum = fromJust . (`elemIndex` setOps) . unSetOp
+
+instance Bounded SetOp where
+  minBound = SetOp (head setOps)
+  maxBound = SetOp (last setOps)
 
 data GLStat t
   = SIf (GLExpr t) (GLStat t) (Maybe (GLStat t))
