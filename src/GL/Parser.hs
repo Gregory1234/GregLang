@@ -5,9 +5,7 @@ module GL.Parser
   )
 where
 
-import           Data.Bool
 import           Data.Maybe
-import           Data.Tuple.HT
 import           Data.Void
 import           GL.Data.SyntaxTree
 import           GL.Data.Token
@@ -20,6 +18,7 @@ import           Control.Lens            hiding ( (<&>)
                                                 )
 import           GL.Utils
 import           Control.Monad.State
+import           Control.Applicative
 
 type Parser = P.ParsecT Void [LocToken] (State Integer)
 
@@ -47,6 +46,9 @@ tident = P.label "<type ident>" $ satisfyT (^? _TTypeIdent)
 kw :: Keyword -> Parser ()
 kw = exactT . TKeyword
 
+preKw :: Keyword -> Parser a -> Parser a
+preKw k a = kw k *> a
+
 optionL :: Parser [a] -> Parser [a]
 optionL = P.option []
 
@@ -66,8 +68,40 @@ importParser = fmap GLImport $ kw "import" *> P.sepBy (show <$> ident) (kw ".")
 classParser :: Parser (GLClass IType)
 classParser = GLClass <$> (kw "class" *> tident) <*> P.many funParser
 
+typeParser :: Parser GLType
+typeParser = GLType <$> tident
+
+maybeTypeParser :: Parser IType
+maybeTypeParser = (ConcreteIType <$> typeParser) <|> (NumberIType <$> inc)
+
 funParser :: Parser (GLFun IType)
-funParser = undefined
+funParser =
+  GLFun
+    <$> maybeTypeParser
+    <*> ident
+    <*> optionL (parens $ maybeCommas $ maybeTypeParser <&> ident)
+    <*> braces (P.many statParser)
+
+statParser :: Parser (GLStat IType)
+statParser = P.choice
+  [ SIf <$> preKw "if" exprParser <*> statParser <*> optional
+    (preKw "else" statParser)
+  , SWhile <$> preKw "while" exprParser <*> statParser
+  , flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
+  , SLet <$> preKw "let" maybeTypeParser <*> ident <*> preKw "=" exprParser
+  , uncurry SSet
+  <$> P.try (ident <&> satisfyT (^? _TKeyword . to show . _Show))
+  <*> exprParser
+  , SReturn <$> exprParser
+  , pure SBreak
+  , pure SContinue
+  , pure SNoOp
+  , SBraces <$> braces (P.many statParser)
+  , SExpr <$> exprParser
+  ]
+
+exprParser :: Parser (GLExpr IType)
+exprParser = undefined
 
 parseGregLang :: FilePath -> [LocToken] -> Either String (AST IType)
 parseGregLang p t =

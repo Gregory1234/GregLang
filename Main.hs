@@ -5,7 +5,7 @@ module Main where
 import           GL.Args
 import           GL.Lexer
 import           GL.Parser
-import           GL.TypeChecker
+--import           GL.TypeChecker
 
 main :: IO ()
 main = do
@@ -15,7 +15,7 @@ main = do
     (Left  err) -> putStrLn err
     (Right tok) -> print tok *> case parseGregLang inputFileArg tok of
       (Left  err) -> putStrLn err
-      (Right ast) -> print ast *> case typeCheck ast of
+      (Right ast) -> print ast {-*> case typeCheck ast of
         (Left  err ) -> putStrLn err
-        (Right ast') -> print ast'
+        (Right ast') -> print ast'-}
   return ()
