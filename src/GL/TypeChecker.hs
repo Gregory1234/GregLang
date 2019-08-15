@@ -12,7 +12,7 @@ import           GL.Data.SyntaxTree
 import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
 import           Data.Maybe
-import           Data.Functor
+import           GL.Utils
 import           Control.Lens                   ( view )
 
 data IType =

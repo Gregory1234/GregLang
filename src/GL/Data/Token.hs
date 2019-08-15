@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, FlexibleInstances, TypeFamilies,
+{-# LANGUAGE TemplateHaskell, RecordWildCards, FlexibleInstances, TypeFamilies,
    Strict, DerivingVia, GeneralizedNewtypeDeriving #-}
 
 module GL.Data.Token
@@ -9,6 +9,16 @@ module GL.Data.Token
   , LocToken(..)
   , recreateToken
   , recreateToken'
+  , tokenVal
+  , tokenPos
+  , _TBegin
+  , _TIdent
+  , _TTypeIdent
+  , _TStringLit
+  , _TIntLit
+  , _TFloatLit
+  , _TCharLit
+  , _TKeyword
   )
 where
 
@@ -26,6 +36,7 @@ import           Text.Read               hiding ( Ident )
 import           GL.Data.Ident
 import           Data.String
 import           Data.Maybe
+import           Control.Lens
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
 updatePosString p []          = p
@@ -112,10 +123,12 @@ instance Read Token where
     , TTypeIdent <$> readPrec
     ]
 
+makePrisms ''Token
+
 data LocToken =
   LocToken
-    { tokenVal :: Token
-    , tokenPos :: P.SourcePos
+    { _tokenVal :: Token
+    , _tokenPos :: P.SourcePos
     , tokenSpellingDuring :: String
     , tokenSpellingAfter :: String
     }
@@ -123,8 +136,11 @@ data LocToken =
 
 instance Show LocToken where
   show LocToken {..} =
-    show tokenVal ++ " at " ++ P.sourcePosPretty tokenPos ++ " spelled " ++ show
-      (tokenSpellingDuring ++ tokenSpellingAfter)
+    show _tokenVal
+      ++ " at "
+      ++ P.sourcePosPretty _tokenPos
+      ++ " spelled "
+      ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
@@ -146,7 +162,7 @@ instance P.Stream [LocToken] where
              | null s    = Nothing
              | otherwise = Just (splitAt n s)
   takeWhile_ = span
-  showTokens Proxy = intercalate ", " . NE.toList . fmap (show . tokenVal)
+  showTokens Proxy = intercalate ", " . NE.toList . fmap (show . _tokenVal)
   reachOffset o P.PosState {..} =
     ( epos
     , line
@@ -166,3 +182,6 @@ instance P.Stream [LocToken] where
       splitOn "\n" (pstateInput >>= recreateToken' (P.unPos pstateTabWidth))
     line = strs !! min (length strs - 1) ind
     ind  = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos
+
+
+makeLenses ''LocToken

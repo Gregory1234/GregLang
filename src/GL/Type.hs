@@ -8,7 +8,6 @@ module GL.Type
   )
 where
 
-import           Data.Tree
 import           GL.Utils
 import           GL.Data.Ident
 

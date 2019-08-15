@@ -6,6 +6,7 @@ module GL.Utils
   , second
   , on
   , ($>)
+  , void
   , Treeable(..)
   , listToTree
   , treeShow
@@ -34,6 +35,7 @@ import           Data.Bifunctor
 import           Data.Function
 import           Data.Functor                   ( ($>) )
 import           Data.Maybe.HT
+import           Control.Monad
 
 class Treeable a where
   toTree :: a -> Tree String

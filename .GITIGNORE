@@ -4,3 +4,4 @@ dist/
 *.hp
 *.prof
 *.local
+*~
