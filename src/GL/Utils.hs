@@ -20,6 +20,8 @@ module GL.Utils
   , listToEither
   , breakList
   , (<&>)
+  , enumerate
+  , readElem
   )
 where
 
@@ -31,6 +33,7 @@ import           Data.List
 import           Data.Bifunctor
 import           Data.Function
 import           Data.Functor                   ( ($>) )
+import           Data.Maybe.HT
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -90,3 +93,9 @@ breakList xs (y : ys)                = first (y :) $ breakList xs ys
 
 (<&>) :: Applicative f => f a -> f b -> f (a, b)
 a <&> b = (,) <$> a <*> b
+
+enumerate :: (Bounded a, Enum a) => [a]
+enumerate = [minBound .. maxBound]
+
+readElem :: (Show a, Show b, Read b) => [b] -> a -> Maybe b
+readElem l a = toMaybe (show a `elem` map show l) (read $ show a)

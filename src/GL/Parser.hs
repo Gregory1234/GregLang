@@ -8,7 +8,6 @@ where
 import           Control.Monad
 import           Data.Bool
 import           Data.Maybe
-import           Data.Maybe.HT
 import           Data.Tuple.HT
 import           Data.Void
 import           GL.Data.SyntaxTree
@@ -57,6 +56,13 @@ tokenTypeIdent = P.label "<type ident>" $ tokenSatisfy
 tokenKeyword :: Keyword -> Parser ()
 tokenKeyword = tokenExact . TKeyword
 
+optionL :: Parser [a] -> Parser [a]
+optionL = P.option []
+
+maybeCommas :: Parser a -> Parser [a]
+maybeCommas a =
+  optionL ((:) <$> a <*> (P.many (tokenKeyword "," *> a) <|> P.many a))
+
 parser :: Parser (Typed AST)
 parser = AST [] <$> (tokenExact TBegin *> classParser <* P.eof)
 
@@ -65,13 +71,11 @@ classParser =
   GLClass <$> (tokenKeyword "class" *> tokenTypeIdent) <*> P.many funParser
 
 funParser :: Parser (Typed GLFun)
-funParser =
-  uncurry GLFun <$> typeParserClear <*> P.option [] parseArgs <*> braces
-    (P.many statParser)
+funParser = uncurry GLFun <$> typeParserClear <*> optionL parseArgs <*> braces
+  (P.many statParser)
 
 parseArgs :: Parser [(Maybe GLType, Ident)]
-parseArgs =
-  parens (P.many typeParserClear <|> P.sepBy typeParserClear (tokenKeyword ","))
+parseArgs = parens (maybeCommas typeParserClear)
 
 statParser :: Parser (Typed GLStat)
 statParser =
@@ -134,10 +138,19 @@ typeParserClear :: Parser (Maybe GLType, Ident)
 typeParserClear =
   P.try ((Just <$> typeParser) <&> tokenIdent) <|> (Nothing, ) <$> tokenIdent
 
-typeParserExpr :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
-typeParserExpr e =
-  uncurry (set exprType1)
-    <$> (P.try ((Just <$> parens typeParser) <&> e) <|> (Nothing, ) <$> e)
+prefixExprParser :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
+prefixExprParser e =
+  (   EPrefix Nothing
+    <$> tokenSatisfy
+          (\case
+            (TKeyword a) -> readElem enumerate a
+            _            -> Nothing
+          )
+    <*> e
+    )
+    <|> (   uncurry (set exprType1)
+        <$> (P.try ((Just <$> parens typeParser) <&> e) <|> (Nothing, ) <$> e)
+        )
 
 exprLevel :: Bool -> [ExprOp] -> Parser (Typed GLExpr) -> Parser (Typed GLExpr)
 exprLevel b op e =
@@ -145,9 +158,8 @@ exprLevel b op e =
     (   (,)
     <$> tokenSatisfy
           (\case
-            (TKeyword a) ->
-              toMaybe (show a `elem` map show op) (read $ show a)
-            _ -> Nothing
+            (TKeyword a) -> readElem op a
+            _            -> Nothing
           )
     <*> e
     )
@@ -159,12 +171,10 @@ varParser :: Parser (Typed GLExpr) -> Parser (Typed GLExpr)
 varParser e = do
   e1 <- e
   ns <- P.many
-    (tokenKeyword "." *> tokenIdent <&> P.option
-      []
-      (parens (P.many exprParser <|> P.sepBy exprParser (tokenKeyword ",")))
+    (tokenKeyword "." *> tokenIdent <&> optionL
+      (parens (maybeCommas exprParser))
     )
   return (foldl (\a (b, l) -> EVar Nothing (Just a) b l) e1 ns)
-
 
 
 exprParser :: Parser (Typed GLExpr)
@@ -181,7 +191,7 @@ exprParser =
       , ["+", "-"]
       , ["*", "/", "%"]
       ]
-    $ typeParserExpr
+    $ prefixExprParser
         (varParser $ P.choice
           [ P.label "int literal" $ tokenSatisfy
             (\case
@@ -209,11 +219,7 @@ exprParser =
                   (TIdent a) -> Just (EVar Nothing Nothing a)
                   _          -> Nothing
                 )
-          <*> P.option
-                []
-                (parens
-                  (P.many exprParser <|> P.sepBy exprParser (tokenKeyword ","))
-                )
+          <*> optionL (parens (maybeCommas exprParser))
           , EParen Nothing <$> parens exprParser
           ]
         )

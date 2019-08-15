@@ -17,12 +17,12 @@ import           GL.Utils
 import           GL.Data.Ident
 
 instance Arbitrary Keyword where
-  arbitrary = elements [minBound .. maxBound]
+  arbitrary = elements enumerate
   shrink (Keyword "if") = []
   shrink _              = [Keyword "if"]
 
 keywords :: [String]
-keywords = map show ([minBound .. maxBound] :: [Keyword])
+keywords = map show (enumerate :: [Keyword])
 
 instance Arbitrary Ident where
   arbitrary =
@@ -98,13 +98,13 @@ newtype TokenStream =
 
 arbitrarySpelling = return . spellToken
 
-spaceList = filter isSpace [minBound .. maxBound]
+spaceList = filter isSpace enumerate
 
-identBegList = filter (isAlpha &&& isLower ||| (== '_')) [minBound .. maxBound]
+identBegList = filter (isAlpha &&& isLower ||| (== '_')) enumerate
 
-typeIdentBegList = filter (isAlpha &&& isUpper) [minBound .. maxBound]
+typeIdentBegList = filter (isAlpha &&& isUpper) enumerate
 
-identMidList = filter (isAlphaNum ||| (== '_')) [minBound .. maxBound]
+identMidList = filter (isAlphaNum ||| (== '_')) enumerate
 
 arbitraryTokenStream :: Int -> P.SourcePos -> Gen [LocToken]
 arbitraryTokenStream 0 _ = return []
