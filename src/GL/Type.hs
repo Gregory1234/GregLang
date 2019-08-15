@@ -5,6 +5,7 @@ module GL.Type
   , showTypeTree
   , showTypeShow
   , GLType(..)
+  , IType(..)
   )
 where
 
@@ -26,6 +27,9 @@ instance IsType () where
 instance IsType String where
   showType s x = x ++ " : " ++ s
 
+instance IsType Integer where
+  showType n x = x ++ " : <" ++ show n ++ ">"
+
 instance (IsType a) => IsType (Maybe a) where
   showType (Just a) = showType a
   showType Nothing  = id
@@ -34,3 +38,11 @@ newtype GLType = GLType ClassName
   deriving stock Eq
   deriving IsType via String
   deriving Show via ClearShow
+
+data IType =
+    NumberIType Integer
+  | ConcreteIType GLType deriving Show
+
+instance IsType IType where
+  showType (NumberIType   n) = showType n
+  showType (ConcreteIType t) = showType t

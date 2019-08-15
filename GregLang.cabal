@@ -34,7 +34,8 @@ library
         split -any,
         template-haskell -any,
         transformers -any,
-        lens -any
+        lens -any,
+        mtl -any
 
 executable GregLangCompiler
     main-is: Main.hs

@@ -2,8 +2,6 @@
 
 module GL.TypeChecker
   ( typeCheck
-  , IType(..)
-  , prepTypeCheck
   )
 where
 
@@ -14,20 +12,6 @@ import           Control.Monad.Trans.Writer
 import           Data.Maybe
 import           GL.Utils
 import           Control.Lens                   ( view )
-
-data IType =
-    NumberIType Integer
-  | ConcreteIType GLType deriving Show
-
-instance IsType IType where
-  showType (NumberIType   n) x = x ++ " : <" ++ show n ++ ">"
-  showType (ConcreteIType t) x = showType t x
-
-prepTypeCheck :: AST (Maybe GLType) -> AST IType
-prepTypeCheck ast = evalState (mapM helper ast) 0
- where
-  helper (Just t) = pure $ ConcreteIType t
-  helper Nothing  = NumberIType <$> get <* modify (+ 1)
 
 data TypeConstraint = TypeEqual IType IType deriving Show
 
@@ -96,8 +80,5 @@ solveConstraints c = mapM helper
     | otherwise = Left ("couldn't match types " ++ show a ++ " and " ++ show b)
   solve n [] = Left ("ambigous type " ++ show n)
 
-typeCheck :: AST (Maybe GLType) -> Either String (AST GLType)
-typeCheck a =
-  let a' = prepTypeCheck a
-      c  = typeInfer a'
-  in  solveConstraints c a'
+typeCheck :: AST IType -> Either String (AST GLType)
+typeCheck a = solveConstraints (typeInfer a) a
