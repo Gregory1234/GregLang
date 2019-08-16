@@ -8,6 +8,7 @@ module GL.Data.SyntaxTree
   , GLFun(..)
   , GLStat(..)
   , GLExpr(..)
+  , GLExprU(..)
   , ExprOp(..)
   , ExprPrefixOp(..)
   , SetOp(..)

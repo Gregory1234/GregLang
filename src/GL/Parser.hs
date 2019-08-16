@@ -87,21 +87,33 @@ statParser = P.choice
   [ SIf <$> preKw "if" exprParser <*> statParser <*> optional
     (preKw "else" statParser)
   , SWhile <$> preKw "while" exprParser <*> statParser
-  , flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
-  , SLet <$> preKw "let" maybeTypeParser <*> ident <*> preKw "=" exprParser
-  , uncurry SSet
-  <$> P.try (ident <&> satisfyT (^? _TKeyword . to show . _Show))
-  <*> exprParser
-  , SReturn <$> exprParser
-  , pure SBreak
-  , pure SContinue
-  , pure SNoOp
+  , sc $ flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
+  , sc $ SLet <$> preKw "let" maybeTypeParser <*> ident <*> preKw "=" exprParser
+  , sc $ P.try (SSet <$> ident <*> so) <*> exprParser
+  , sc $ SReturn <$> preKw "return" exprParser
+  , sc $ kw "break" $> SBreak
+  , sc $ kw "continue" $> SContinue
+  , kw ";" $> SNoOp
   , SBraces <$> braces (P.many statParser)
-  , SExpr <$> exprParser
+  , sc $ SExpr <$> exprParser
   ]
+ where
+  sc = (<* optional (kw ";"))
+  so = P.label "<setting operator>" (satisfyT (^? _TKeyword . to show . _Show))
 
 exprParser :: Parser (GLExpr IType)
-exprParser = undefined
+exprParser = GLExpr <$> (NumberIType <$> inc) <*> exprUParser exprParser
+
+exprUParser :: Parser e -> Parser (GLExprU e)
+exprUParser e = P.choice
+  [ litParser "<int literal>"    EIntLit    _TIntLit
+  , litParser "<float literal>"  EFloatLit  _TFloatLit
+  , litParser "<char literal>"   ECharLit   _TCharLit
+  , litParser "<string literal>" EStringLit _TStringLit
+  , EVar Nothing <$> ident <*> optionL (parens (maybeCommas e))
+  , EParen <$> parens e
+  ]
+  where litParser n f g = P.label n $ f <$> satisfyT (^? g)
 
 parseGregLang :: FilePath -> [LocToken] -> Either String (AST IType)
 parseGregLang p t =

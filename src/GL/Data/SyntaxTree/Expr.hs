@@ -2,6 +2,7 @@
   GeneralizedNewtypeDeriving #-}
 module GL.Data.SyntaxTree.Expr
   ( GLExpr(..)
+  , GLExprU(..)
   , ExprOp(..)
   , ExprPrefixOp(..)
   , exprType1
@@ -59,26 +60,28 @@ instance Bounded ExprPrefixOp where
   minBound = ExprPrefixOp (head exprPrefixOps)
   maxBound = ExprPrefixOp (last exprPrefixOps)
 
-data GLExpr t =
-    ECast t (GLExpr t)
-  | EIntLit Integer
+data GLExpr t = GLExpr t (GLExprU (GLExpr t))
+  deriving stock (Foldable,Traversable,Functor)
+
+exprType1 :: Traversal' (GLExpr t) t
+exprType1 f (GLExpr t e) = GLExpr <$> f t <*> pure e
+
+instance IsType t => Treeable (GLExpr t) where
+  toTree (GLExpr t e) = showTypeTree t (toTree e)
+
+data GLExprU e =
+    EIntLit Integer
   | EFloatLit Double
   | ECharLit Char
   | EStringLit String
-  | EOp (GLExpr t) ExprOp (GLExpr t)
-  | EPrefix ExprPrefixOp (GLExpr t)
-  | EVar (Maybe (GLExpr t)) Ident [GLExpr t]
-  | EParen (GLExpr t)
-  deriving stock (Functor,Foldable,Traversable)
-  deriving Show via (PrettyTree (GLExpr t))
+  | EOp e ExprOp e
+  | EPrefix ExprPrefixOp e
+  | EVar (Maybe e) Ident [e]
+  | EParen e
+  deriving stock (Foldable,Traversable,Functor)
+  deriving Show via (PrettyTree (GLExprU e))
 
-exprType1 :: Traversal' (GLExpr t) t
-exprType1 f (ECast t e) = ECast <$> f t <*> pure e
-exprType1 f (EParen e ) = exprType1 f e
-exprType1 _ x           = pure x
-
-instance IsType t => Treeable (GLExpr t) where
-  toTree (ECast t e         ) = showTypeTree t (toTree e)
+instance Treeable e => Treeable (GLExprU e) where
   toTree (EIntLit    i      ) = toTree $ show i
   toTree (EFloatLit  f      ) = toTree $ show f
   toTree (EStringLit s      ) = toTree $ show s
