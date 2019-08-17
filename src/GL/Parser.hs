@@ -127,6 +127,11 @@ exprLevel op e = do
 exprLevels :: [[ExprOp]] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
 exprLevels = flip $ foldr exprLevel
 
+exprPrefix :: Parser (GLExpr IType) -> Parser (GLExpr IType)
+exprPrefix e = (incType =<< (EPrefix <$> po <*> e)) <|> e
+ where
+  po = P.label "<prefix operator>" (satisfyT (^? _TKeyword . to show . _Show))
+
 exprExtParser :: Parser (GLExpr IType)
 exprExtParser =
   exprLevels
@@ -141,6 +146,7 @@ exprExtParser =
       , ["+", "-"]
       , ["*", "/", "%"]
       ]
+    $   exprPrefix
     $   incType
     =<< exprUBaseParser
 
