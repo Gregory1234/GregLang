@@ -11,6 +11,7 @@ where
 
 import           GL.Utils
 import           GL.Data.Ident
+import           Data.String
 
 class IsType t where
   showType :: t -> String -> String
@@ -36,7 +37,7 @@ instance (IsType a) => IsType (Maybe a) where
 
 newtype GLType = GLType ClassName
   deriving stock Eq
-  deriving IsType via String
+  deriving (IsType,IsString) via String
   deriving Show via ClearShow
 
 data IType =
