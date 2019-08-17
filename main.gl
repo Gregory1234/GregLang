@@ -3,5 +3,5 @@ class Main
 \\The main function returning a void
 \\It takes no parameters
 Void main(){
-  print( \* this is a string literal -> *\ "hello", -1 )
+  print( \* this is a string literal -> *\ "hello", 1 * 4 + 2 * 3)
 }

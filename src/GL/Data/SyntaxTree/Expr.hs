@@ -1,11 +1,12 @@
 {-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
-  GeneralizedNewtypeDeriving #-}
+  GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module GL.Data.SyntaxTree.Expr
   ( GLExpr(..)
   , GLExprU(..)
   , ExprOp(..)
   , ExprPrefixOp(..)
-  , exprType1
+  , exprType
+  , exprUntyped
   )
 where
 
@@ -60,11 +61,10 @@ instance Bounded ExprPrefixOp where
   minBound = ExprPrefixOp (head exprPrefixOps)
   maxBound = ExprPrefixOp (last exprPrefixOps)
 
-data GLExpr t = GLExpr t (GLExprU (GLExpr t))
-  deriving stock (Foldable,Traversable,Functor)
-
-exprType1 :: Traversal' (GLExpr t) t
-exprType1 f (GLExpr t e) = GLExpr <$> f t <*> pure e
+data GLExpr t = GLExpr
+  { _exprType :: t
+  , _exprUntyped :: GLExprU (GLExpr t)
+  } deriving stock (Foldable,Traversable,Functor)
 
 instance IsType t => Treeable (GLExpr t) where
   toTree (GLExpr t e) = showTypeTree t (toTree e)
@@ -94,3 +94,5 @@ instance Treeable e => Treeable (GLExprU e) where
   toTree (EVar (Just d) n xs) =
     Node (show n) [Node "of" [toTree d], listToTree "args" xs]
   toTree (EParen e) = Node "parens" [toTree e]
+
+makeLenses ''GLExpr

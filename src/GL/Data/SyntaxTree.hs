@@ -12,7 +12,8 @@ module GL.Data.SyntaxTree
   , ExprOp(..)
   , ExprPrefixOp(..)
   , SetOp(..)
-  , exprType1
+  , exprType
+  , exprUntyped
   , statExprs
   , funType
   , funName

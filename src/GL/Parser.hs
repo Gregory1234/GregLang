@@ -17,6 +17,7 @@ import           Control.Lens            hiding ( (<&>)
                                                 , op
                                                 )
 import           GL.Utils
+import           Control.Monad
 import           Control.Monad.State
 import           Control.Applicative
 
@@ -57,6 +58,9 @@ maybeCommas a = optionL ((:) <$> a <*> (P.many (kw "," *> a) <|> P.many a))
 
 inc :: (MonadState a m, Num a) => m a
 inc = get <* modify (+ 1)
+
+incType :: GLExprU (GLExpr IType) -> Parser (GLExpr IType)
+incType a = GLExpr <$> (NumberIType <$> inc) <*> pure a
 
 parser :: Parser (AST IType)
 parser =
@@ -102,18 +106,59 @@ statParser = P.choice
   so = P.label "<setting operator>" (satisfyT (^? _TKeyword . to show . _Show))
 
 exprParser :: Parser (GLExpr IType)
-exprParser = GLExpr <$> (NumberIType <$> inc) <*> exprUParser exprParser
+exprParser = exprExtParser <|> exprBaseParser
 
-exprUParser :: Parser e -> Parser (GLExprU e)
-exprUParser e = P.choice
-  [ litParser "<int literal>"    EIntLit    _TIntLit
-  , litParser "<float literal>"  EFloatLit  _TFloatLit
-  , litParser "<char literal>"   ECharLit   _TCharLit
-  , litParser "<string literal>" EStringLit _TStringLit
-  , EVar Nothing <$> ident <*> optionL (parens (maybeCommas e))
-  , EParen <$> parens e
-  ]
-  where litParser n f g = P.label n $ f <$> satisfyT (^? g)
+exprBaseParser :: Parser (GLExpr IType)
+exprBaseParser =
+  GLExpr
+    <$> ((ConcreteIType <$> parens typeParser) <|> (NumberIType <$> inc))
+    <*> exprUBaseParser
+
+exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
+exprLevel op e = do
+  e1 <- e
+  es <- P.many (bo <&> e)
+  foldM helper e1 es
+ where
+  helper a (b, c) = incType $ EOp a b c
+  bo = P.label "<binary operator>"
+               (satisfyT (^? _TKeyword . folding (readElem op)))
+
+exprLevels :: [[ExprOp]] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
+exprLevels = flip $ foldr exprLevel
+
+exprExtParser :: Parser (GLExpr IType)
+exprExtParser =
+  exprLevels
+      [ ["||"]
+      , ["^^"]
+      , ["&&"]
+      , ["|"]
+      , ["^"]
+      , ["&"]
+      , ["==", "!="]
+      , ["<", ">", "<=", ">="]
+      , ["+", "-"]
+      , ["*", "/", "%"]
+      ]
+    $   incType
+    =<< exprUBaseParser
+
+exprUBaseParser :: Parser (GLExprU (GLExpr IType))
+exprUBaseParser = do
+  e <- P.choice
+    [ litParser "<int literal>"    EIntLit    _TIntLit
+    , litParser "<float literal>"  EFloatLit  _TFloatLit
+    , litParser "<char literal>"   ECharLit   _TCharLit
+    , litParser "<string literal>" EStringLit _TStringLit
+    , EVar Nothing <$> ident <*> optionL (parens (maybeCommas exprParser))
+    , EParen <$> parens exprParser
+    ]
+  ds <- P.many (preKw "." ident <&> optionL (parens (maybeCommas exprParser)))
+  foldM helper e ds
+ where
+  litParser n f g = P.label n $ f <$> satisfyT (^? g)
+  helper a (b, c) = EVar <$> (Just <$> incType a) <*> pure b <*> pure c
 
 parseGregLang :: FilePath -> [LocToken] -> Either String (AST IType)
 parseGregLang p t =
