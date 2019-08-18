@@ -17,11 +17,11 @@ import           Data.Maybe
 
 data TypeConstraint = TypeEqual IType IType deriving Show
 
-teq :: MonadWriter [TypeEqual] m => IType -> IType -> m ()
+teq :: MonadWriter [TypeConstraint] m => IType -> IType -> m ()
 teq t1 t2 = tell [TypeEqual t1 t2]
-teqn :: MonadWriter [TypeEqual] m => IType -> GLType -> m ()
+teqn :: MonadWriter [TypeConstraint] m => IType -> GLType -> m ()
 teqn t n = teq t (ConcreteIType n)
-teqe :: MonadWriter [TypeEqual] m => IType -> GLExpr -> m ()
+teqe :: MonadWriter [TypeConstraint] m => IType -> GLExpr IType -> m ()
 teqe t e = teq t (_exprType e)
 
 type ContextT t m = StateT [[(t, Ident)]] (ReaderT t m)
@@ -47,7 +47,7 @@ getTypeCtx n = gets $ fromJust . getFirst . foldMap (First . lookupInv n)
 typeInfer :: AST IType -> [TypeConstraint]
 typeInfer = foldMapOf (astClass . classFuns . traverse) helperFun
  where
-  helperFun (GLFun t n a s) =
+  helperFun (GLFun t _ a s) =
     execWriter (evalContext (mapM helperStat s) ([] : a : globalCtx) t)
   globalCtx = [[]]
   helperStat :: GLStat IType -> ContextT IType (Writer [TypeConstraint]) ()
