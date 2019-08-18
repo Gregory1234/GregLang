@@ -90,6 +90,7 @@ statParser :: Parser (GLStat IType)
 statParser = P.choice
   [ SIf <$> preKw "if" exprParser <*> statParser <*> optional
     (preKw "else" statParser)
+  , (uncurry . uncurry) SFor <$> preKw "for" forHelper <*> statParser
   , SWhile <$> preKw "while" exprParser <*> statParser
   , sc $ flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
   , sc $ SLet <$> preKw "let" maybeTypeParser <*> ident <*> preKw "=" exprParser
@@ -104,6 +105,13 @@ statParser = P.choice
  where
   sc = (<* optional (kw ";"))
   so = P.label "<setting operator>" (satisfyT (^? _TKeyword . to show . _Show))
+  forHelper =
+    P.try (preKw "(" statParser <&> sc exprParser)
+      <&> (statParser <* kw ")")
+      <|> statParser
+      <&> sc exprParser
+      <&> statParser
+
 
 exprParser :: Parser (GLExpr IType)
 exprParser = exprExtParser <|> exprBaseParser

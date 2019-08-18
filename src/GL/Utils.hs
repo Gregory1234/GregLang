@@ -93,6 +93,7 @@ breakList xs ys | xs `isPrefixOf` ys = ([], ys)
 breakList _  []                      = ([], [])
 breakList xs (y : ys)                = first (y :) $ breakList xs ys
 
+infixl 4 <&>
 (<&>) :: Applicative f => f a -> f b -> f (a, b)
 a <&> b = (,) <$> a <*> b
 

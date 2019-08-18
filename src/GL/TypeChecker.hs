@@ -17,12 +17,14 @@ import           Data.Maybe
 
 data TypeConstraint = TypeEqual IType IType deriving Show
 
-teq :: MonadWriter [TypeConstraint] m => IType -> IType -> m ()
-teq t1 t2 = tell [TypeEqual t1 t2]
+teqt :: MonadWriter [TypeConstraint] m => IType -> IType -> m ()
+teqt t1 t2 = tell [TypeEqual t1 t2]
 teqn :: MonadWriter [TypeConstraint] m => IType -> GLType -> m ()
-teqn t n = teq t (ConcreteIType n)
+teqn t n = teqt t (ConcreteIType n)
 teqe :: MonadWriter [TypeConstraint] m => IType -> GLExpr IType -> m ()
-teqe t e = teq t (_exprType e)
+teqe t e = teqt t (_exprType e)
+eeqn :: MonadWriter [TypeConstraint] m => GLExpr IType -> GLType -> m ()
+eeqn e = teqn (_exprType e)
 
 type ContextT t m = StateT [[(t, Ident)]] (ReaderT t m)
 
@@ -52,8 +54,18 @@ typeInfer = foldMapOf (astClass . classFuns . traverse) helperFun
   globalCtx = [[]]
   helperStat :: GLStat IType -> ContextT IType (Writer [TypeConstraint]) ()
   helperStat (SIf e s1 s2) =
-    void $ helperExpr' e *> raiseCtx (helperStat s1) *> raiseCtx
-      (traverse helperStat s2)
+    void
+      $  eeqn e "Bool"
+      *> helperExpr' e
+      *> raiseCtx (helperStat s1)
+      *> raiseCtx (traverse helperStat s2)
+  helperStat (SFor s1 e s2 s3) = raiseCtx
+    (  helperStat s1
+    *> eeqn e "Bool"
+    *> helperExpr' e
+    *> helperStat s2
+    *> helperStat s3
+    )
   helperStat (SWhile   e s) = helperExpr' e *> raiseCtx (helperStat s)
   helperStat (SDoWhile e s) = raiseCtx (helperStat s) *> helperExpr' e
   helperStat (SLet t n   e) = helperExpr' e *> addCtx t n
