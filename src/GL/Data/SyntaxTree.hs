@@ -3,6 +3,7 @@
 
 module GL.Data.SyntaxTree
   ( AST(..)
+  , GLPackage(..)
   , GLImport(..)
   , GLClass(..)
   , GLFun(..)
@@ -23,6 +24,8 @@ module GL.Data.SyntaxTree
   , classFuns
   , astImports
   , astClass
+  , packagePath
+  , importPackage
   , importPath
   )
 where
@@ -50,8 +53,11 @@ instance IsType t => Treeable (GLFun t) where
     ("fun " ++ showTypeShow t n)
     (listToTree "args" (uncurry showTypeShow <$> as) : map toTree s)
 
+instance Show GLPackage where
+  show (GLPackage s) = intercalate "." s
+
 instance Show GLImport where
-  show (GLImport s) = intercalate "." s
+  show (GLImport p) = "import" ++ show p
 
 data AST t = AST
   { _astImports :: [GLImport]
@@ -59,7 +65,9 @@ data AST t = AST
   } deriving stock (Functor,Foldable,Traversable)
     deriving Show via (PrettyTree (AST t))
 
-newtype GLImport = GLImport { _importPath :: [String] }
+newtype GLPackage = GLPackage { _packagePath :: [String] } deriving Eq
+
+newtype GLImport = GLImport { _importPackage :: GLPackage }
 
 data GLClass t = GLClass
   { _className :: ClassName
@@ -76,6 +84,10 @@ data GLFun t = GLFun
     deriving Show via (PrettyTree (GLFun t))
 
 makeLenses ''AST
+makeLenses ''GLPackage
 makeLenses ''GLImport
 makeLenses ''GLClass
 makeLenses ''GLFun
+
+importPath :: Iso' GLImport [String]
+importPath = importPackage . packagePath

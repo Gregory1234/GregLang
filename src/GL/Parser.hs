@@ -67,7 +67,10 @@ parser =
   AST <$> P.many importParser <*> bracketAny (exactT TBegin) P.eof classParser
 
 importParser :: Parser GLImport
-importParser = fmap GLImport $ kw "import" *> P.sepBy (show <$> ident) (kw ".")
+importParser = GLImport <$> preKw "import" packageParser
+
+packageParser :: Parser GLPackage
+packageParser = GLPackage <$> P.sepBy (show <$> ident) (kw ".")
 
 classParser :: Parser (GLClass IType)
 classParser = GLClass <$> (kw "class" *> tident) <*> P.many funParser

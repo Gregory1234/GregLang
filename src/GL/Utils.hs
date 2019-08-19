@@ -15,7 +15,6 @@ module GL.Utils
   , appDb
   , (|||)
   , (&&&)
-  , lookupInv
   , ClearShow(..)
   , readPrecGather
   , listToEither
@@ -23,6 +22,9 @@ module GL.Utils
   , (<&>)
   , enumerate
   , readElem
+  , maybeToEither
+  , headEither
+  , eitherConcat
   )
 where
 
@@ -71,11 +73,6 @@ appDb f g h x = f (g x) (h x)
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = appDb (&&)
 
-lookupInv :: (Eq a) => a -> [(b, a)] -> Maybe b
-lookupInv _ [] = Nothing
-lookupInv k ((x, y) : xs) | k == y    = Just x
-                          | otherwise = lookupInv k xs
-
 newtype ClearShow = ClearShow String
 
 instance Show ClearShow where
@@ -102,3 +99,18 @@ enumerate = [minBound .. maxBound]
 
 readElem :: (Show a, Show b, Read b) => [b] -> a -> Maybe b
 readElem l a = toMaybe (show a `elem` map show l) (read $ show a)
+
+maybeToEither :: a -> Maybe b -> Either a b
+maybeToEither _ (Just x) = Right x
+maybeToEither x Nothing  = Left x
+
+headEither :: a -> [b] -> Either a b
+headEither x []      = Left x
+headEither _ (x : _) = Right x
+
+eitherConcat :: Monoid m => [Either a m] -> Either a m
+eitherConcat (Left  x : _ ) = Left x
+eitherConcat (Right x : xs) = case eitherConcat xs of
+  Left  a -> Left a
+  Right a -> Right (a <> x)
+eitherConcat [] = Right mempty
