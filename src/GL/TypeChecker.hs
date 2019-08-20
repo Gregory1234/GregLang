@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, TupleSections #-}
 
 module GL.TypeChecker
   ( typeCheck
@@ -15,7 +15,7 @@ import           Control.Monad.Writer
 import           Control.Monad.Except
 import           Data.Maybe
 
-data TypeConstraint = TypeEqual IType IType deriving Show
+data TypeConstraint = TypeEqual IType IType deriving (Show,Eq)
 
 teqt :: MonadWriter [TypeConstraint] m => IType -> IType -> m ()
 teqt t1 t2 = tell [TypeEqual t1 t2]
@@ -34,10 +34,7 @@ data CtxElement t =
   | CtxMethod GLPackage ClassName t Ident [t]
   | CtxLocal t Ident
 
-data ClassContext = ClassContext
-  { currentPackage :: GLPackage
-  , currentClassName :: ClassName
-  }
+data ClassContext = ClassContext GLPackage ClassName
 
 ctxGetFuns
   :: (MonadState (Ctx t) m, MonadReader (t, ClassContext) m)
@@ -88,7 +85,6 @@ ctxRaise m = modify ([] :) *> m <* modify tail
 typeInfer :: AST IType -> Either String [TypeConstraint]
 typeInfer (AST i (GLClass n f)) = eitherConcat $ helperFun n <$> f
  where
-  helperFun :: ClassName -> GLFun IType -> Either String [TypeConstraint]
   helperFun c (GLFun t n a s) =
     eitherConcat
       $   runExcept
@@ -134,8 +130,46 @@ typeInfer (AST i (GLClass n f)) = eitherConcat $ helperFun n <$> f
     void $ traverse helperExpr' e *> traverse helperExpr' es
   helperExpr t (EParen e) = teqe t e *> helperExpr' e
 
-solveConstraints :: AST IType -> [TypeConstraint] -> Either String (AST GLType)
-solveConstraints _ c = Left (show c)
+solveConstraints :: [TypeConstraint] -> Either String [GLType]
+solveConstraints c =
+  maybeToEither "couldn't solve for a type" . sequence . snd =<< tryTillStableM
+    tryMatchingAll
+    (c, [])
+ where
+  tryMatchingAll
+    :: ([TypeConstraint], [Maybe GLType])
+    -> Either String ([TypeConstraint], [Maybe GLType])
+  tryMatchingAll ([]    , ys) = Right ([], ys)
+  tryMatchingAll (x : xs, ys) = do
+    (b, ys') <- tryMatchingOne x ys
+    if b
+      then tryMatchingAll (xs, ys')
+      else first (x :) <$> tryMatchingAll (xs, ys)
+  tryMatchingOne (TypeEqual (ConcreteIType n) (ConcreteIType m))
+    | n == m = Right . (True, )
+    | otherwise = const
+    $ Left ("Couldn't match types " ++ show n ++ " and " ++ show m)
+  tryMatchingOne (TypeEqual (ConcreteIType n) (NumberIType a)) =
+    Right . (True, ) . setAt a (Just n)
+  tryMatchingOne (TypeEqual (NumberIType a) (ConcreteIType n)) =
+    Right . (True, ) . setAt a (Just n)
+  tryMatchingOne (TypeEqual (NumberIType a) (NumberIType b)) = do
+    v <- ask
+    case getAt a v of
+      Nothing -> Right . case getAt b v of
+        Nothing   -> (False, )
+        (Just b') -> (True, ) . setAt a (getAt b v)
+      (Just a') -> case getAt b v of
+        Nothing   -> Right . (True, ) . setAt b (Just a')
+        (Just b') -> const
+          $ Left ("Couldn't match types " ++ show a' ++ " and " ++ show b')
+
+
+mapSolved :: [GLType] -> AST IType -> AST GLType
+mapSolved l = fmap helper
+ where
+  helper (NumberIType   i) = l !! fromIntegral i
+  helper (ConcreteIType t) = t
 
 typeCheck :: AST IType -> Either String (AST GLType)
-typeCheck a = solveConstraints a =<< typeInfer a
+typeCheck a = flip mapSolved a <$> (typeInfer >=> solveConstraints) a

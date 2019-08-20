@@ -42,7 +42,7 @@ newtype GLType = GLType ClassName
 
 data IType =
     NumberIType Integer
-  | ConcreteIType GLType deriving Show
+  | ConcreteIType GLType deriving (Show,Eq)
 
 instance IsType IType where
   showType (NumberIType   n) = showType n

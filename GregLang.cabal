@@ -35,7 +35,8 @@ library
         template-haskell -any,
         transformers -any,
         lens -any,
-        mtl -any
+        mtl -any,
+        data-default-class -any
 
 executable GregLangCompiler
     main-is: Main.hs

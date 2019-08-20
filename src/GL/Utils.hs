@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module GL.Utils
   ( Tree(..)
@@ -7,6 +8,7 @@ module GL.Utils
   , on
   , ($>)
   , void
+  , Default(..)
   , Treeable(..)
   , listToTree
   , treeShow
@@ -25,6 +27,9 @@ module GL.Utils
   , maybeToEither
   , headEither
   , eitherConcat
+  , setAt
+  , getAt
+  , tryTillStableM
   )
 where
 
@@ -38,6 +43,7 @@ import           Data.Function
 import           Data.Functor                   ( ($>) )
 import           Data.Maybe.HT
 import           Control.Monad
+import           Data.Default.Class
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -114,3 +120,21 @@ eitherConcat (Right x : xs) = case eitherConcat xs of
   Left  a -> Left a
   Right a -> Right (a <> x)
 eitherConcat [] = Right mempty
+
+setAt :: (Integral n, Default a) => n -> a -> [a] -> [a]
+setAt n _ _ | n < 0 = error "GL.Utils.setAt: negative index"
+setAt 0 a []        = [a]
+setAt n a []        = def : setAt (n - 1) a []
+setAt 0 a (_ : xs)  = a : xs
+setAt n a (x : xs)  = x : setAt (n - 1) a xs
+
+getAt :: (Integral n, Default a) => n -> [a] -> a
+getAt n _ | n < 0 = error "GL.Utils.getAt: negative index"
+getAt _ []        = def
+getAt 0 (x : _ )  = x
+getAt n (_ : xs)  = getAt (n - 1) xs
+
+tryTillStableM :: (Eq a, Monad m) => (a -> m a) -> a -> m a
+tryTillStableM f a = do
+  b <- f a
+  if b == a then return a else tryTillStableM f b
