@@ -54,7 +54,8 @@ optionL :: Parser [a] -> Parser [a]
 optionL = P.option []
 
 maybeCommas :: Parser a -> Parser [a]
-maybeCommas a = optionL ((:) <$> a <*> (P.many (kw "," *> a) <|> P.many a))
+maybeCommas a =
+  optionL ((:) <$> a <*> optionL (P.some (preKw "," a) <|> P.some a))
 
 inc :: (MonadState a m, Num a) => m a
 inc = get <* modify (+ 1)
@@ -78,15 +79,18 @@ classParser = GLClass <$> (kw "class" *> tident) <*> P.many funParser
 typeParser :: Parser GLType
 typeParser = GLType <$> tident
 
-maybeTypeParser :: Parser IType
-maybeTypeParser = (ConcreteIType <$> typeParser) <|> (NumberIType <$> inc)
+safeArg :: Parser (IType, Ident)
+safeArg = do
+  a <- optional typeParser
+  i <- ident
+  t <- maybe (NumberIType <$> inc) (return . ConcreteIType) a
+  return (t, i)
 
 funParser :: Parser (GLFun IType)
 funParser =
-  GLFun
-    <$> maybeTypeParser
-    <*> ident
-    <*> optionL (parens $ maybeCommas $ maybeTypeParser <&> ident)
+  uncurry GLFun
+    <$> safeArg
+    <*> optionL (parens $ maybeCommas safeArg)
     <*> braces (P.many statParser)
 
 statParser :: Parser (GLStat IType)
@@ -96,7 +100,7 @@ statParser = P.choice
   , (uncurry . uncurry) SFor <$> preKw "for" forHelper <*> statParser
   , SWhile <$> preKw "while" exprParser <*> statParser
   , sc $ flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
-  , sc $ SLet <$> preKw "let" maybeTypeParser <*> ident <*> preKw "=" exprParser
+  , sc $ uncurry SLet <$> preKw "let" safeArg <*> preKw "=" exprParser
   , sc $ P.try (SSet <$> ident <*> so) <*> exprParser
   , sc $ SReturn <$> preKw "return" exprParser
   , sc $ kw "break" $> SBreak
