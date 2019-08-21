@@ -39,7 +39,7 @@ newtype Keyword = Keyword { unKeyword :: String }
 
 keywords :: [String]
 keywords = concat
-  [ ["class", "import", "if", "else", "while", "do"]
+  [ ["class", "package", "import", "if", "else", "while", "do"]
   , ["for", "let", "return", "import", "break", "continue"]
   , ["{", "}", "(", ")", "[", "]", ";", ".", ","]
   , ["==", "<=", ">=", "!=", "+=", "-=", "*=", "/=", "%="]

@@ -1,8 +1,5 @@
-\\A class called Main
-class Main
-\\The main function returning a void
-\\It takes no parameters
-Void main(){
-  for (let i = 0 (i<5) i+=1) ;
-  for let i = 0 (i<5) i+=1 {;}
+package main
+
+main(){
+  return 12;
 }

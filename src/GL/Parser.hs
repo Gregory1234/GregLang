@@ -65,7 +65,12 @@ incType a = GLExpr <$> (NumberIType <$> inc) <*> pure a
 
 parser :: Parser (AST IType)
 parser =
-  AST <$> P.many importParser <*> bracketAny (exactT TBegin) P.eof classParser
+  bracketAny (exactT TBegin) P.eof
+    $   AST
+    <$> preKw "package" packageParser
+    <*> P.many importParser
+    <*> P.many funParser
+    <*> P.many classParser
 
 importParser :: Parser GLImport
 importParser = GLImport <$> preKw "import" packageParser

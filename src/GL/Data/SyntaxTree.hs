@@ -18,7 +18,13 @@ import           Control.Lens
 import           Data.List
 
 instance IsType t => Treeable (AST t) where
-  toTree (AST i c) = Node "AST" [listToTree "imports" i, toTree c]
+  toTree (AST p i f c) = Node
+    "AST"
+    [ toTree $ "package" ++ show p
+    , listToTree "imports" i
+    , listToTree "funs"    f
+    , listToTree "classes" c
+    ]
 
 instance Treeable GLImport where
   toTree = toTree . show
@@ -38,8 +44,10 @@ instance Show GLImport where
   show (GLImport p) = "import" ++ show p
 
 data AST t = AST
-  { _astImports :: [GLImport]
-  , _astClass :: GLClass t
+  { _astPackage :: GLPackage
+  , _astImports :: [GLImport]
+  , _astFunctions :: [GLFun t]
+  , _astClasses :: [GLClass t]
   } deriving stock (Functor,Foldable,Traversable)
     deriving Show via (PrettyTree (AST t))
 

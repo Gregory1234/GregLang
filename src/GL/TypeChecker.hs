@@ -34,7 +34,7 @@ data CtxElement t =
   | CtxMethod GLPackage ClassName t Ident [t]
   | CtxLocal t Ident
 
-data ClassContext = ClassContext GLPackage ClassName
+data ClassContext = ClassContext GLPackage (Maybe ClassName)
 
 ctxGetFuns
   :: (MonadState (Ctx t) m, MonadReader (t, ClassContext) m)
@@ -45,7 +45,7 @@ ctxGetFuns i = do
   gets (mapMaybe (helper p c) . concat)
  where
   helper _ _ (CtxFun _ ft fi fa) | i == fi = Just (ft, fa)
-  helper p c (CtxMethod fp fc ft fi fa) | p == fp, c == fc, i == fi =
+  helper p (Just c) (CtxMethod fp fc ft fi fa) | p == fp, c == fc, i == fi =
     Just (ft, fa)
   helper _ _ _ = Nothing
 
@@ -63,9 +63,10 @@ ctxGetVars i = do
   gets (mapMaybe (helper p c) . concat)
  where
   helper _ _ (CtxFun _ ft fi []) | i == fi = Just ft
-  helper p c (CtxMethod fp fc ft fi []) | p == fp, c == fc, i == fi = Just ft
-  helper _ _ (CtxLocal ft fi) | i == fi    = Just ft
-  helper _ _ _                             = Nothing
+  helper p (Just c) (CtxMethod fp fc ft fi []) | p == fp, c == fc, i == fi =
+    Just ft
+  helper _ _ (CtxLocal ft fi) | i == fi = Just ft
+  helper _ _ _                          = Nothing
 
 ctxGetVar
   :: ( MonadState (Ctx t) m
@@ -74,7 +75,9 @@ ctxGetVar
      )
   => Ident
   -> m t
-ctxGetVar i = liftEither =<< (headEither "Bla" <$> ctxGetVars i)
+ctxGetVar i =
+  liftEither
+    =<< (headEither ("Couldn't fine the variable " ++ show i) <$> ctxGetVars i)
 
 ctxAdd :: (MonadState (Ctx t) m) => t -> Ident -> m ()
 ctxAdd t i = modify (\(x : xs) -> (CtxLocal t i : x) : xs)
@@ -83,13 +86,15 @@ ctxRaise :: (MonadState (Ctx t) m) => m a -> m a
 ctxRaise m = modify ([] :) *> m <* modify tail
 
 typeInfer :: AST IType -> Either String [TypeConstraint]
-typeInfer (AST _ (GLClass cn f)) = eitherConcat $ helperFun cn <$> f
+typeInfer (AST pn _ f cs) =
+  eitherConcat $ (helperFun pn Nothing <$> f) ++ concat (helperClass pn <$> cs)
  where
-  helperFun c (GLFun t _ a s) =
+  helperClass p (GLClass cn ms) = helperFun p (Just cn) <$> ms
+  helperFun p c (GLFun t _ a s) =
     eitherConcat
       $   runExcept
       .   execWriterT
-      .   flip runReaderT (t, ClassContext (GLPackage []) c)
+      .   flip runReaderT (t, ClassContext p c)
       .   flip evalStateT ([] : map helperArg a : globalCtx)
       .   helperStat
       <$> s
