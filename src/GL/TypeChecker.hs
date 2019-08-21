@@ -83,9 +83,9 @@ ctxRaise :: (MonadState (Ctx t) m) => m a -> m a
 ctxRaise m = modify ([] :) *> m <* modify tail
 
 typeInfer :: AST IType -> Either String [TypeConstraint]
-typeInfer (AST i (GLClass n f)) = eitherConcat $ helperFun n <$> f
+typeInfer (AST _ (GLClass cn f)) = eitherConcat $ helperFun cn <$> f
  where
-  helperFun c (GLFun t n a s) =
+  helperFun c (GLFun t _ a s) =
     eitherConcat
       $   runExcept
       .   execWriterT
@@ -110,7 +110,7 @@ typeInfer (AST i (GLClass n f)) = eitherConcat $ helperFun n <$> f
     )
   helperStat (SWhile   e s) = helperExpr' e *> ctxRaise (helperStat s)
   helperStat (SDoWhile e s) = ctxRaise (helperStat s) *> helperExpr' e
-  helperStat (SLet t n   e) = helperExpr' e *> ctxAdd t n
+  helperStat (SLet t n   e) = teqe t e *> helperExpr' e *> ctxAdd t n
   helperStat (SSet n "=" e) = (flip teqe e =<< ctxGetVar n) *> helperExpr' e
   helperStat (SSet _ _   e) = helperExpr' e
   helperStat (SReturn e   ) = (flip teqe e =<< asks fst) *> helperExpr' e
@@ -120,21 +120,24 @@ typeInfer (AST i (GLClass n f)) = eitherConcat $ helperFun n <$> f
   helperStat (SBraces s)    = void $ ctxRaise $ mapM helperStat s
   helperStat (SExpr   e)    = helperExpr' e
   helperExpr' (GLExpr t u) = helperExpr t u
-  helperExpr t (EIntLit    _) = teqn t "Int"
-  helperExpr t (EFloatLit  _) = teqn t "Float"
-  helperExpr t (ECharLit   _) = teqn t "Char"
-  helperExpr t (EStringLit _) = teqn t "String"
-  helperExpr _ (EOp e1 _ e2 ) = helperExpr' e1 *> helperExpr' e2
-  helperExpr _ (EPrefix _ e ) = helperExpr' e
+  helperExpr t (EIntLit    _     ) = teqn t "Int"
+  helperExpr t (EFloatLit  _     ) = teqn t "Float"
+  helperExpr t (ECharLit   _     ) = teqn t "Char"
+  helperExpr t (EStringLit _     ) = teqn t "String"
+  helperExpr _ (EOp e1 _ e2      ) = helperExpr' e1 *> helperExpr' e2
+  helperExpr _ (EPrefix _ e      ) = helperExpr' e
+  helperExpr t (EVar Nothing n []) = teqt t =<< ctxGetVar n
   helperExpr _ (EVar e _ es) =
     void $ traverse helperExpr' e *> traverse helperExpr' es
   helperExpr t (EParen e) = teqe t e *> helperExpr' e
 
 solveConstraints :: [TypeConstraint] -> Either String [GLType]
 solveConstraints c =
-  maybeToEither "couldn't solve for a type" . sequence . snd =<< tryTillStableM
-    tryMatchingAll
-    (c, [])
+  maybeToEither "couldn't solve for a type"
+    .   sequence
+    .   snd
+    =<< tryMatchingAll
+    =<< tryTillStableM tryMatchingAll (c, [])
  where
   tryMatchingAll
     :: ([TypeConstraint], [Maybe GLType])
@@ -158,7 +161,7 @@ solveConstraints c =
     case getAt a v of
       Nothing -> Right . case getAt b v of
         Nothing   -> (False, )
-        (Just b') -> (True, ) . setAt a (getAt b v)
+        (Just b') -> (True, ) . setAt a (Just b')
       (Just a') -> case getAt b v of
         Nothing   -> Right . (True, ) . setAt b (Just a')
         (Just b') -> const
