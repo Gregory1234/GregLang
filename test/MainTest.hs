@@ -21,9 +21,6 @@ instance Arbitrary Keyword where
   shrink (Keyword "if") = []
   shrink _              = [Keyword "if"]
 
-keywords :: [String]
-keywords = map show (enumerate :: [Keyword])
-
 instance Arbitrary Ident where
   arbitrary =
     Ident
