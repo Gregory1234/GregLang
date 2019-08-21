@@ -2,31 +2,9 @@
   DeriveTraversable #-}
 
 module GL.Data.SyntaxTree
-  ( AST(..)
-  , GLPackage(..)
-  , GLImport(..)
-  , GLClass(..)
-  , GLFun(..)
-  , GLStat(..)
-  , GLExpr(..)
-  , GLExprU(..)
-  , ExprOp(..)
-  , ExprPrefixOp(..)
-  , SetOp(..)
-  , exprType
-  , exprUntyped
-  , statExprs
-  , funType
-  , funName
-  , funArgs
-  , funStats
-  , className
-  , classFuns
-  , astImports
-  , astClass
-  , packagePath
-  , importPackage
-  , importPath
+  ( module GL.Data.SyntaxTree
+  , module GL.Data.SyntaxTree.Stat
+  , module GL.Data.SyntaxTree.Expr
   )
 where
 

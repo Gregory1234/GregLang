@@ -8,28 +8,8 @@ module GL.Utils
   , on
   , ($>)
   , void
-  , Default(..)
-  , Treeable(..)
-  , listToTree
-  , treeShow
-  , PrettyTree(..)
-  , replaceTabs
-  , appDb
-  , (|||)
-  , (&&&)
-  , ClearShow(..)
-  , readPrecGather
-  , listToEither
-  , breakList
-  , (<&>)
-  , enumerate
-  , readElem
-  , maybeToEither
-  , headEither
-  , eitherConcat
-  , setAt
-  , getAt
-  , tryTillStableM
+  , module Data.Default.Class
+  , module GL.Utils
   )
 where
 

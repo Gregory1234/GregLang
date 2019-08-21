@@ -1,6 +1,5 @@
 module GL.Args
-  ( getArgs
-  , Args(..)
+  ( module GL.Args
   )
 where
 

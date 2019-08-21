@@ -2,23 +2,7 @@
    Strict, DerivingVia, GeneralizedNewtypeDeriving #-}
 
 module GL.Data.Token
-  ( Keyword(..)
-  , updatePosString
-  , Token(..)
-  , spellToken
-  , LocToken(..)
-  , recreateToken
-  , recreateToken'
-  , tokenVal
-  , tokenPos
-  , _TBegin
-  , _TIdent
-  , _TTypeIdent
-  , _TStringLit
-  , _TIntLit
-  , _TFloatLit
-  , _TCharLit
-  , _TKeyword
+  ( module GL.Data.Token
   )
 where
 

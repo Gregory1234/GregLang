@@ -1,9 +1,7 @@
 {-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
   GeneralizedNewtypeDeriving #-}
 module GL.Data.SyntaxTree.Stat
-  ( GLStat(..)
-  , SetOp(..)
-  , statExprs
+  ( module GL.Data.SyntaxTree.Stat
   )
 where
 

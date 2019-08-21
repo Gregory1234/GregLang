@@ -1,11 +1,7 @@
 {-# LANGUAGE FlexibleInstances, DerivingVia #-}
 
 module GL.Type
-  ( IsType(..)
-  , showTypeTree
-  , showTypeShow
-  , GLType(..)
-  , IType(..)
+  ( module GL.Type
   )
 where
 
