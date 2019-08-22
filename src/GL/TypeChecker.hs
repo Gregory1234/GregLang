@@ -87,7 +87,7 @@ ctxRaise m = modify ([] :) *> m <* modify tail
 
 typeInfer :: AST IType -> Either String [TypeConstraint]
 typeInfer (AST pn _ f cs) =
-  eitherConcat $ (helperFun pn Nothing <$> f) ++ concat (helperClass pn <$> cs)
+  eitherConcat $ (helperFun pn Nothing <$> f) ++ (helperClass pn =<< cs)
  where
   helperClass p (GLClass cn ms) = helperFun p (Just cn) <$> ms
   helperFun p c (GLFun t _ a s) =

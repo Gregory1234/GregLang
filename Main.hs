@@ -6,6 +6,7 @@ import           GL.Args
 import           GL.Lexer
 import           GL.Parser
 import           GL.TypeChecker
+import           GL.Codegen.LLVM
 
 main :: IO ()
 main = do
@@ -16,6 +17,9 @@ main = do
     (Right tok) -> print tok *> case parseGregLang inputFileArg tok of
       (Left  err) -> putStrLn err
       (Right ast) -> print ast *> case typeCheck ast of
-        (Left  err ) -> putStrLn err
-        (Right ast') -> print ast'
+        (Left err) -> putStrLn err
+        (Right ast') ->
+          print ast'
+            *> let out = codegen inputFileArg ast'
+               in  print out *> writeFile outputFileArg out
   return ()

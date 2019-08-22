@@ -2,9 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module GL.Utils
-  ( Tree(..)
-  , first
-  , second
+  ( module Data.Tree
+  , module Data.Bifunctor
   , on
   , ($>)
   , void

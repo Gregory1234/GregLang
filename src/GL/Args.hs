@@ -32,4 +32,4 @@ getArgs = do
   a <- A.parseArgsIO A.ArgsComplete schema
   return $ Args
     (A.getRequiredArg a "in")
-    (fromMaybe (A.getRequiredArg a "in" ++ ".o") (A.getArg a "out"))
+    (fromMaybe (A.getRequiredArg a "in" ++ ".ll") (A.getArg a "out"))

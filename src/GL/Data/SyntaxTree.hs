@@ -20,7 +20,7 @@ import           Data.List
 instance IsType t => Treeable (AST t) where
   toTree (AST p i f c) = Node
     "AST"
-    [ toTree $ "package" ++ show p
+    [ toTree $ "package " ++ show p
     , listToTree "imports" i
     , listToTree "funs"    f
     , listToTree "classes" c
