@@ -79,7 +79,8 @@ packageParser :: Parser GLPackage
 packageParser = GLPackage <$> P.sepBy (show <$> ident) (kw ".")
 
 classParser :: Parser (GLClass IType)
-classParser = GLClass <$> (kw "class" *> tident) <*> P.many funParser
+classParser =
+  GLClass <$> (kw "class" *> tident) <*> P.many fieldParser <*> P.many funParser
 
 typeParser :: Parser GLType
 typeParser = GLType <$> tident
@@ -90,6 +91,13 @@ safeArg = do
   i <- ident
   t <- maybe (NumberIType <$> inc) (return . ConcreteIType) a
   return (t, i)
+
+fieldParser :: Parser (GLField IType)
+fieldParser =
+  P.try
+    $   uncurry GLField
+    <$> safeArg
+    <*> (optional (preKw "=" exprParser) <* optional (kw ";"))
 
 funParser :: Parser (GLFun IType)
 funParser =

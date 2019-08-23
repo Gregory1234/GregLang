@@ -31,6 +31,7 @@ type CtxLevel t = [CtxElement t]
 
 data CtxElement t =
     CtxFun GLPackage t Ident [t]
+  | CtxField GLPackage ClassName t Ident
   | CtxMethod GLPackage ClassName t Ident [t]
   | CtxLocal t Ident
 
@@ -50,7 +51,7 @@ ctxGetFuns i = do
   helper _ _ _ = Nothing
 
 ctxGetMethods
-  :: (MonadState (Ctx t) m) => GLPackage -> ClassName -> Ident -> m [(t, [t])]
+  :: MonadState (Ctx t) m => GLPackage -> ClassName -> Ident -> m [(t, [t])]
 ctxGetMethods p c i = gets (mapMaybe helper . concat)
  where
   helper (CtxMethod fp fc ft fi fa) | p == fp, c == fc, i == fi = Just (ft, fa)
@@ -79,6 +80,13 @@ ctxGetVar i =
   liftEither
     =<< (headEither ("Couldn't fine the variable " ++ show i) <$> ctxGetVars i)
 
+ctxGetFields :: MonadState (Ctx t) m => GLPackage -> ClassName -> Ident -> m [t]
+ctxGetFields p c i = gets (mapMaybe helper . concat)
+ where
+  helper (CtxMethod fp fc ft fi []) | p == fp, c == fc, i == fi = Just ft
+  helper (CtxField fp fc ft fi) | p == fp, c == fc, i == fi = Just ft
+  helper _ = Nothing
+
 ctxAdd :: (MonadState (Ctx t) m) => t -> Ident -> m ()
 ctxAdd t i = modify (\(x : xs) -> (CtxLocal t i : x) : xs)
 
@@ -86,10 +94,8 @@ ctxRaise :: (MonadState (Ctx t) m) => m a -> m a
 ctxRaise m = modify ([] :) *> m <* modify tail
 
 typeInfer :: AST IType -> Either String [TypeConstraint]
-typeInfer (AST pn _ f cs) =
-  eitherConcat $ (helperFun pn Nothing <$> f) ++ (helperClass pn =<< cs)
+typeInfer (AST pn _ f cs) = error "TODO"
  where
-  helperClass p (GLClass cn ms) = helperFun p (Just cn) <$> ms
   helperFun p c (GLFun t _ a s) =
     eitherConcat
       $   runExcept

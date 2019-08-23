@@ -30,6 +30,9 @@ class Treeable a where
 listToTree :: Treeable a => String -> [a] -> Tree String
 listToTree s = Node s . map toTree
 
+toForest :: Treeable a => [a] -> Forest String
+toForest = map toTree
+
 instance Treeable String where
   toTree s = Node s []
 
