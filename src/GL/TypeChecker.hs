@@ -38,7 +38,7 @@ data CtxElement t =
 data ClassContext = ClassContext GLPackage (Maybe ClassName)
 
 ctxGetFuns
-  :: (MonadState (Ctx t) m, MonadReader (t, ClassContext) m)
+  :: (MonadState (Ctx t) m, MonadReader (v, ClassContext) m)
   => Ident
   -> m [(t, [t])]
 ctxGetFuns i = do
@@ -58,7 +58,7 @@ ctxGetMethods p c i = gets (mapMaybe helper . concat)
   helper _ = Nothing
 
 ctxGetVars
-  :: (MonadState (Ctx t) m, MonadReader (t, ClassContext) m) => Ident -> m [t]
+  :: (MonadState (Ctx t) m, MonadReader (v, ClassContext) m) => Ident -> m [t]
 ctxGetVars i = do
   (ClassContext p c) <- asks snd
   gets (mapMaybe (helper p c) . concat)
@@ -71,7 +71,7 @@ ctxGetVars i = do
 
 ctxGetVar
   :: ( MonadState (Ctx t) m
-     , MonadReader (t, ClassContext) m
+     , MonadReader (v, ClassContext) m
      , MonadError String m
      )
   => Ident
@@ -93,19 +93,41 @@ ctxAdd t i = modify (\(x : xs) -> (CtxLocal t i : x) : xs)
 ctxRaise :: (MonadState (Ctx t) m) => m a -> m a
 ctxRaise m = modify ([] :) *> m <* modify tail
 
-typeInfer :: AST IType -> Either String [TypeConstraint]
-typeInfer (AST pn _ f cs) = error "TODO"
+globalContext :: AST t -> Ctx t
+globalContext (AST pn _ f cs) =
+  (helperFun Nothing <$> f) : (helperClass <$> cs)
  where
+  helperClass (GLClass cn fs ms) =
+    (helperField cn <$> fs) ++ (helperFun (Just cn) <$> ms)
+  helperField cn (GLField t n _) = CtxField pn cn t n
+  helperFun Nothing   (GLFun t n a _) = CtxFun pn t n (fst <$> a)
+  helperFun (Just cn) (GLFun t n a _) = CtxMethod pn cn t n (fst <$> a)
+
+typeInfer :: AST IType -> Either String [TypeConstraint]
+typeInfer ast@(AST pn _ f cs) =
+  eitherConcat
+    . concat
+    $ ((helperFun pn Nothing <$> f) : (helperClass pn <$> cs))
+ where
+  helperClass p (GLClass n fs ms) =
+    (helperField p n <$> fs) ++ (helperFun p (Just n) <$> ms)
+  helperField p c (GLField t n e) =
+    runExcept
+      $  execWriterT
+      $  flip runReaderT ((), ClassContext p (Just c))
+      $  flip evalStateT ([] : globalCtx)
+      $  void
+      $  traverse (teqe t)    e
+      *> traverse helperExpr' e
   helperFun p c (GLFun t _ a s) =
     eitherConcat
       $   runExcept
       .   execWriterT
       .   flip runReaderT (t, ClassContext p c)
-      .   flip evalStateT ([] : map helperArg a : globalCtx)
+      .   flip evalStateT ([] : (uncurry CtxLocal <$> a) : globalCtx)
       .   helperStat
       <$> s
-  helperArg (t, n) = CtxLocal t n
-  globalCtx = [[]]
+  globalCtx = globalContext ast
   helperStat (SIf e s1 s2) =
     void
       $  eeqn e "Bool"
