@@ -7,6 +7,7 @@ module GL.Utils
   , on
   , ($>)
   , void
+  , join
   , module Data.Default.Class
   , module GL.Utils
   )
@@ -120,3 +121,7 @@ tryTillStableM :: (Eq a, Monad m) => (a -> m a) -> a -> m a
 tryTillStableM f a = do
   b <- f a
   if b == a then return a else tryTillStableM f b
+
+infixl 4 *>>=
+(*>>=) :: (Monad m) => m (a -> m b) -> m a -> m b
+(*>>=) f a = join $ f <*> a

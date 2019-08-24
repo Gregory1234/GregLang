@@ -6,10 +6,11 @@ module GL.Codegen.LLVM
 where
 
 import           LLVM.AST                      as L
-import           LLVM.AST.Constant             as L
+import           LLVM.AST.Constant             as C
 import           LLVM.Pretty                   as L
 import           Data.Text.Lazy                as T
 import           LLVM.IRBuilder                as B
+import           LLVM.IRBuilder.Instruction    as B
 import           GL.Data.SyntaxTree
 import           GL.Data.Ident
 import           GL.Type
@@ -46,7 +47,18 @@ codegenExpr
   :: GLExpr GLType
   -> StateT [L.Operand] (B.IRBuilderT B.ModuleBuilder) L.Operand
 codegenExpr (GLExpr "Int" (EIntLit i)) =
-  return $ L.ConstantOperand $ L.Int 64 i
+  return $ L.ConstantOperand $ C.Int 64 i
+codegenExpr (GLExpr _ (EParen e)) = codegenExpr e
+codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "+" e2@(GLExpr "Int" _))) =
+  B.add <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "-" e2@(GLExpr "Int" _))) =
+  B.sub <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "*" e2@(GLExpr "Int" _))) =
+  B.mul <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "/" e2@(GLExpr "Int" _))) =
+  B.sdiv <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "%" e2@(GLExpr "Int" _))) =
+  B.srem <$> codegenExpr e1 *>>= codegenExpr e2
 
 codegenStat
   :: GLStat GLType -> StateT [L.Operand] (B.IRBuilderT B.ModuleBuilder) ()

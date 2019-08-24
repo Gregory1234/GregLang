@@ -134,7 +134,7 @@ statParser = P.choice
 
 
 exprParser :: Parser (GLExpr IType)
-exprParser = exprExtParser <|> exprBaseParser
+exprParser = P.try exprExtParser <|> exprBaseParser
 
 exprBaseParser :: Parser (GLExpr IType)
 exprBaseParser =
@@ -174,9 +174,7 @@ exprExtParser =
       , ["+", "-"]
       , ["*", "/", "%"]
       ]
-    $   exprPrefix
-    $   incType
-    =<< exprUBaseParser
+    $ exprPrefix exprBaseParser
 
 exprUBaseParser :: Parser (GLExprU (GLExpr IType))
 exprUBaseParser = do

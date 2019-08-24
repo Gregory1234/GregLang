@@ -1,5 +1,5 @@
 package main
 
-main(){
-  return 12;
+Int main(){
+  return (Int) (1+2)*3;
 }
