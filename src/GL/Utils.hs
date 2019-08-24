@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances, GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleInstances, DefaultSignatures,
+  GeneralizedNewtypeDeriving #-}
 
 module GL.Utils
   ( module Data.Tree
@@ -24,6 +24,7 @@ import           Data.Functor                   ( ($>) )
 import           Data.Maybe.HT
 import           Control.Monad
 import           Data.Default.Class
+import           Control.Lens
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -40,15 +41,8 @@ instance Treeable String where
 instance Treeable (Tree String) where
   toTree = id
 
-treeShow :: Treeable a => a -> String
-treeShow = drawTree . toTree
-
-newtype PrettyTree t =
-  PrettyTree t
-  deriving (Treeable)
-
-instance Treeable t => Show (PrettyTree t) where
-  show = treeShow
+treePP :: Treeable a => a -> String
+treePP = drawTree . toTree
 
 replaceTabs :: Int -> String -> String
 replaceTabs tw = L.replace "\t" (replicate tw ' ')
@@ -62,13 +56,8 @@ appDb f g h x = f (g x) (h x)
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = appDb (&&)
 
-newtype ClearShow = ClearShow String
-
-instance Show ClearShow where
-  show (ClearShow x) = x
-
-readPrecGather :: Read a => ReadS (String, a)
-readPrecGather = RP.readP_to_S (RP.gather (readPrec_to_P readPrec 0))
+lexGather :: Lexable a => ReadS (String, a)
+lexGather = RP.readP_to_S (RP.gather (readPrec_to_P lexAP 0))
 
 listToEither :: b -> [a] -> Either b a
 listToEither b []      = Left b
@@ -86,8 +75,8 @@ a <&> b = (,) <$> a <*> b
 enumerate :: (Bounded a, Enum a) => [a]
 enumerate = [minBound .. maxBound]
 
-readElem :: (Show a, Show b, Read b) => [b] -> a -> Maybe b
-readElem l a = toMaybe (show a `elem` map show l) (read $ show a)
+lexElem :: (Pretty a, Pretty b, Lexable b) => [b] -> a -> Maybe b
+lexElem l a = toMaybe (showPP a `elem` map showPP l) (lexS $ showPP a)
 
 maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither _ (Just x) = Right x
@@ -125,3 +114,51 @@ tryTillStableM f a = do
 infixl 4 *>>=
 (*>>=) :: (Monad m) => m (a -> m b) -> m a -> m b
 (*>>=) f a = join $ f <*> a
+
+class Pretty a where
+  showPP :: a -> String
+  default showPP :: Show a => a -> String
+  showPP = show
+
+instance Pretty Char
+instance Pretty String
+instance Pretty Int
+instance Pretty Integer
+instance Pretty Float
+instance Pretty Double
+
+newtype ClearString = ClearString {getClearString :: String}
+
+instance Pretty ClearString where
+  showPP = getClearString
+
+newtype PrettyTree t =
+  PrettyTree t
+  deriving Treeable
+
+instance Treeable t => Pretty (PrettyTree t) where
+  showPP = treePP
+
+pprint :: Pretty a => a -> IO ()
+pprint = putStrLn . showPP
+
+class Lexable a where
+  lexAP :: ReadPrec a
+  default lexAP :: Read a => ReadPrec a
+  lexAP = readPrec
+
+lexA :: Lexable a => String -> [(a, String)]
+lexA = readPrec_to_S lexAP 0
+
+lexS :: Lexable a => String -> a
+lexS = fst . head . lexA
+
+instance Lexable Int
+instance Lexable Integer
+instance Lexable Float
+instance Lexable Double
+instance Lexable String
+instance Lexable Char
+
+_Pretty :: (Lexable a, Pretty a) => Prism' String a
+_Pretty = prism showPP $ \s -> second fst $ headEither s $ lexA s

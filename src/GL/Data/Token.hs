@@ -35,7 +35,7 @@ updatePosString p (_ : xs) =
 
 newtype Keyword = Keyword { unKeyword :: String }
   deriving newtype (Eq, Ord, IsString)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 keywords :: [String]
 keywords = concat
@@ -48,8 +48,8 @@ keywords = concat
   , ["&&", "||", "^^", "&", "|", "^"]
   ]
 
-instance Read Keyword where
-  readPrec = Keyword <$> foldl1 (<++) (map (lift . RP.string) keywords)
+instance Lexable Keyword where
+  lexAP = Keyword <$> foldl1 (<++) (map (lift . RP.string) keywords)
 
 instance Enum Keyword where
   toEnum   = Keyword . (keywords !!)
@@ -72,39 +72,40 @@ data Token
 
 spellToken :: Token -> String
 spellToken TBegin         = ""
-spellToken (TIdent     x) = show x
-spellToken (TTypeIdent x) = show x
-spellToken (TStringLit x) = show x
-spellToken (TIntLit    x) = show x
-spellToken (TFloatLit  x) = show x
-spellToken (TCharLit   x) = show x
-spellToken (TKeyword   x) = show x
+spellToken (TIdent     x) = showPP x
+spellToken (TTypeIdent x) = showPP x
+spellToken (TStringLit x) = showPP x
+spellToken (TIntLit    x) = showPP x
+spellToken (TFloatLit  x) = showPP x
+spellToken (TCharLit   x) = showPP x
+spellToken (TKeyword   x) = showPP x
 
-instance Show Token where
-  show TBegin         = "<begin>"
-  show (TIdent     s) = "<ident " ++ show s ++ ">"
-  show (TTypeIdent s) = "<type ident " ++ show s ++ ">"
-  show (TStringLit s) = "<string " ++ show s ++ ">"
-  show (TIntLit    s) = "<int " ++ show s ++ ">"
-  show (TFloatLit  s) = "<float " ++ show s ++ ">"
-  show (TCharLit   s) = "<char " ++ show s ++ ">"
-  show (TKeyword   s) = show (show s)
+instance Pretty Token where
+  showPP TBegin         = "<begin>"
+  showPP (TIdent     s) = "<ident " ++ showPP s ++ ">"
+  showPP (TTypeIdent s) = "<type ident " ++ showPP s ++ ">"
+  showPP (TStringLit s) = "<string " ++ showPP s ++ ">"
+  showPP (TIntLit    s) = "<int " ++ showPP s ++ ">"
+  showPP (TFloatLit  s) = "<float " ++ showPP s ++ ">"
+  showPP (TCharLit   s) = "<char " ++ showPP s ++ ">"
+  showPP (TKeyword   s) = showPP (showPP s)
 
-instance Read Token where
-  readPrec = foldl1
+instance Lexable Token where
+  lexAP = foldl1
     (<++)
     [ do
-      a <- readPrec
+      a <- lexAP
       b <- lift RP.look
       guard
-        (null b || not (isLetter $ head $ show a) || not (isAlphaNum $ head b))
+        (null b || not (isLetter $ head $ showPP a) || not (isAlphaNum $ head b)
+        )
       return $ TKeyword a
-    , TStringLit <$> readPrec
-    , TIntLit <$> readPrec
-    , TFloatLit <$> readPrec
-    , TCharLit <$> readPrec
-    , TIdent <$> readPrec
-    , TTypeIdent <$> readPrec
+    , TStringLit <$> lexAP
+    , TIntLit <$> lexAP
+    , TFloatLit <$> lexAP
+    , TCharLit <$> lexAP
+    , TIdent <$> lexAP
+    , TTypeIdent <$> lexAP
     ]
 
 makePrisms ''Token
@@ -118,13 +119,16 @@ data LocToken =
     }
   deriving (Eq, Ord)
 
-instance Show LocToken where
-  show LocToken {..} =
-    show _tokenVal
+instance Pretty LocToken where
+  showPP LocToken {..} =
+    showPP _tokenVal
       ++ " at "
       ++ P.sourcePosPretty _tokenPos
       ++ " spelled "
-      ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
+      ++ showPP (tokenSpellingDuring ++ tokenSpellingAfter)
+
+instance Pretty [LocToken] where
+  showPP = unlines . map showPP
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
@@ -146,7 +150,7 @@ instance P.Stream [LocToken] where
              | null s    = Nothing
              | otherwise = Just (splitAt n s)
   takeWhile_ = span
-  showTokens Proxy = intercalate ", " . NE.toList . fmap (show . _tokenVal)
+  showTokens Proxy = intercalate ", " . NE.toList . fmap (showPP . _tokenVal)
   reachOffset o P.PosState {..} =
     ( epos
     , line

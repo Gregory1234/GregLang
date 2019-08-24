@@ -15,7 +15,7 @@ import           Control.Monad.Writer
 import           Control.Monad.Except
 import           Data.Maybe
 
-data TypeConstraint = TypeEqual IType IType deriving (Show,Eq)
+data TypeConstraint = TypeEqual IType IType deriving (Eq)
 
 teqt :: MonadWriter [TypeConstraint] m => IType -> IType -> m ()
 teqt t1 t2 = tell [TypeEqual t1 t2]
@@ -78,7 +78,8 @@ ctxGetVar
   -> m t
 ctxGetVar i =
   liftEither
-    =<< (headEither ("Couldn't fine the variable " ++ show i) <$> ctxGetVars i)
+    =<< (headEither ("Couldn't fine the variable " ++ showPP i) <$> ctxGetVars i
+        )
 
 ctxGetFields :: MonadState (Ctx t) m => GLPackage -> ClassName -> Ident -> m [t]
 ctxGetFields p c i = gets (mapMaybe helper . concat)
@@ -184,7 +185,7 @@ solveConstraints c =
   tryMatchingOne (TypeEqual (ConcreteIType n) (ConcreteIType m))
     | n == m = Right . (True, )
     | otherwise = const
-    $ Left ("Couldn't match types " ++ show n ++ " and " ++ show m)
+    $ Left ("Couldn't match types " ++ showPP n ++ " and " ++ showPP m)
   tryMatchingOne (TypeEqual (ConcreteIType n) (NumberIType a)) =
     Right . (True, ) . setAt a (Just n)
   tryMatchingOne (TypeEqual (NumberIType a) (ConcreteIType n)) =
@@ -196,9 +197,10 @@ solveConstraints c =
         Nothing   -> (False, )
         (Just b') -> (True, ) . setAt a (Just b')
       (Just a') -> case getAt b v of
-        Nothing   -> Right . (True, ) . setAt b (Just a')
-        (Just b') -> const
-          $ Left ("Couldn't match types " ++ show a' ++ " and " ++ show b')
+        Nothing -> Right . (True, ) . setAt b (Just a')
+        (Just b') ->
+          const $ Left
+            ("Couldn't match types " ++ showPP a' ++ " and " ++ showPP b')
 
 
 mapSolved :: [GLType] -> AST IType -> AST GLType

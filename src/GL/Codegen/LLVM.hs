@@ -10,7 +10,6 @@ import           LLVM.AST.Constant             as C
 import           LLVM.Pretty                   as L
 import           Data.Text.Lazy                as T
 import           LLVM.IRBuilder                as B
-import           LLVM.IRBuilder.Instruction    as B
 import           GL.Data.SyntaxTree
 import           GL.Data.Ident
 import           GL.Type
@@ -23,7 +22,7 @@ codegen :: FilePath -> AST GLType -> String
 codegen fp ast@(AST pn _ _ _) =
   T.unpack
     $ ppllvm
-    $ Module (fromString (show pn)) (fromString fp) Nothing Nothing
+    $ Module (fromString (showPP pn)) (fromString fp) Nothing Nothing
     $ execModuleBuilder emptyModuleBuilder
     $ codegen' ast
 
@@ -38,7 +37,7 @@ codegenClass _ = return ()
 codegenFun :: Maybe ClassName -> GLFun GLType -> B.ModuleBuilder ()
 codegenFun Nothing (GLFun t (Ident n) a s) =
   B.function (L.mkName n)
-             (bimap typeToLLVM (fromString . show) <$> a)
+             (bimap typeToLLVM (fromString . showPP) <$> a)
              (typeToLLVM t)
              (evalStateT $ traverse_ codegenStat s)
     $> ()

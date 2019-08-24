@@ -17,7 +17,7 @@ import           Data.Maybe
 
 newtype ExprOp = ExprOp { unExprOp :: String }
   deriving newtype (Eq, Ord, IsString)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 exprOps :: [String]
 exprOps = concat
@@ -26,8 +26,8 @@ exprOps = concat
   , ["&&", "||", "^^", "&", "|", "^"]
   ]
 
-instance Read ExprOp where
-  readPrec = ExprOp <$> foldl1 (<++) (map (lift . RP.string) exprOps)
+instance Lexable ExprOp where
+  lexAP = ExprOp <$> foldl1 (<++) (map (lift . RP.string) exprOps)
 
 instance Enum ExprOp where
   toEnum   = ExprOp . (exprOps !!)
@@ -39,14 +39,13 @@ instance Bounded ExprOp where
 
 newtype ExprPrefixOp = ExprPrefixOp { unExprPrefixOp :: String }
   deriving newtype (Eq, Ord, IsString)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 exprPrefixOps :: [String]
 exprPrefixOps = ["!", "-"]
 
-instance Read ExprPrefixOp where
-  readPrec =
-    ExprPrefixOp <$> foldl1 (<++) (map (lift . RP.string) exprPrefixOps)
+instance Lexable ExprPrefixOp where
+  lexAP = ExprPrefixOp <$> foldl1 (<++) (map (lift . RP.string) exprPrefixOps)
 
 instance Enum ExprPrefixOp where
   toEnum   = ExprPrefixOp . (exprPrefixOps !!)
@@ -74,20 +73,20 @@ data GLExprU e =
   | EVar (Maybe e) Ident [e]
   | EParen e
   deriving stock (Foldable,Traversable,Functor)
-  deriving Show via (PrettyTree (GLExprU e))
+  deriving Pretty via (PrettyTree (GLExprU e))
 
 instance Treeable e => Treeable (GLExprU e) where
-  toTree (EIntLit    i      ) = toTree $ show i
-  toTree (EFloatLit  f      ) = toTree $ show f
-  toTree (EStringLit s      ) = toTree $ show s
-  toTree (ECharLit   c      ) = toTree $ show c
-  toTree (EOp e1 op e2      ) = listToTree ("operator " ++ show op) [e1, e2]
-  toTree (EPrefix op e      ) = listToTree ("operator " ++ show op) [e]
+  toTree (EIntLit    i      ) = toTree $ showPP i
+  toTree (EFloatLit  f      ) = toTree $ showPP f
+  toTree (EStringLit s      ) = toTree $ showPP s
+  toTree (ECharLit   c      ) = toTree $ showPP c
+  toTree (EOp e1 op e2      ) = listToTree ("operator " ++ showPP op) [e1, e2]
+  toTree (EPrefix op e      ) = listToTree ("operator " ++ showPP op) [e]
   toTree (EVar Nothing  n []) = toTree n
-  toTree (EVar (Just d) n []) = Node (show n) [Node "of" [toTree d]]
-  toTree (EVar Nothing  n xs) = Node (show n) [listToTree "args" xs]
+  toTree (EVar (Just d) n []) = Node (showPP n) [Node "of" [toTree d]]
+  toTree (EVar Nothing  n xs) = Node (showPP n) [listToTree "args" xs]
   toTree (EVar (Just d) n xs) =
-    Node (show n) [Node "of" [toTree d], listToTree "args" xs]
+    Node (showPP n) [Node "of" [toTree d], listToTree "args" xs]
   toTree (EParen e) = Node "parens" [toTree e]
 
 makeLenses ''GLExpr

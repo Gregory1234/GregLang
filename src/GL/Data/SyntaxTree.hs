@@ -20,32 +20,33 @@ import           Data.List
 instance IsType t => Treeable (AST t) where
   toTree (AST p i f c) = Node
     "AST"
-    [ toTree $ "package " ++ show p
+    [ toTree $ "package " ++ showPP p
     , listToTree "imports" i
     , listToTree "funs"    f
     , listToTree "classes" c
     ]
 
 instance Treeable GLImport where
-  toTree = toTree . show
+  toTree = toTree . showPP
 
 instance IsType t => Treeable (GLClass t) where
-  toTree (GLClass n f m) = Node ("class " ++ show n) (toForest f ++ toForest m)
+  toTree (GLClass n f m) =
+    Node ("class " ++ showPP n) (toForest f ++ toForest m)
 
 instance IsType t => Treeable (GLField t) where
-  toTree (GLField t n (Just e)) = Node (showTypeShow t n ++ " =") [toTree e]
-  toTree (GLField t n Nothing ) = toTree (showTypeShow t n)
+  toTree (GLField t n (Just e)) = Node (showTypeP t n ++ " =") [toTree e]
+  toTree (GLField t n Nothing ) = toTree (showTypeP t n)
 
 instance IsType t => Treeable (GLFun t) where
   toTree (GLFun t n as s) = listToTree
-    ("fun " ++ showTypeShow t n)
-    (listToTree "args" (uncurry showTypeShow <$> as) : map toTree s)
+    ("fun " ++ showTypeP t n)
+    (listToTree "args" (uncurry showTypeP <$> as) : map toTree s)
 
-instance Show GLPackage where
-  show (GLPackage s) = intercalate "." s
+instance Pretty GLPackage where
+  showPP (GLPackage s) = intercalate "." s
 
-instance Show GLImport where
-  show (GLImport p) = "import" ++ show p
+instance Pretty GLImport where
+  showPP (GLImport p) = "import" ++ showPP p
 
 data AST t = AST
   { _astPackage :: GLPackage
@@ -53,7 +54,7 @@ data AST t = AST
   , _astFunctions :: [GLFun t]
   , _astClasses :: [GLClass t]
   } deriving stock (Functor,Foldable,Traversable)
-    deriving Show via (PrettyTree (AST t))
+    deriving Pretty via (PrettyTree (AST t))
 
 newtype GLPackage = GLPackage { _packagePath :: [String] } deriving Eq
 
@@ -64,14 +65,14 @@ data GLClass t = GLClass
   , _classFields :: [GLField t]
   , _classFuns :: [GLFun t]
   } deriving stock (Functor,Foldable,Traversable)
-    deriving Show via (PrettyTree (GLClass t))
+    deriving Pretty via (PrettyTree (GLClass t))
 
 data GLField t = GLField
   { _fieldType :: t
   , _fieldName :: Ident
   , _fieldDefault :: Maybe (GLExpr t)
   } deriving stock (Functor,Foldable,Traversable)
-    deriving Show via (PrettyTree (GLField t))
+    deriving Pretty via (PrettyTree (GLField t))
 
 data GLFun t = GLFun
   { _funType :: t
@@ -79,7 +80,7 @@ data GLFun t = GLFun
   , _funArgs :: [(t, Ident)]
   , _funStats :: [GLStat t]
   } deriving stock (Functor,Foldable,Traversable)
-    deriving Show via (PrettyTree (GLFun t))
+    deriving Pretty via (PrettyTree (GLFun t))
 
 makeLenses ''AST
 makeLenses ''GLPackage

@@ -15,8 +15,8 @@ class IsType t where
 showTypeTree :: IsType t => t -> Tree String -> Tree String
 showTypeTree t (Node a b) = Node (showType t a) b
 
-showTypeShow :: (IsType t, Show a) => t -> a -> String
-showTypeShow t = showType t . show
+showTypeP :: (IsType t, Pretty a) => t -> a -> String
+showTypeP t = showType t . showPP
 
 instance IsType () where
   showType () = id
@@ -32,13 +32,13 @@ instance (IsType a) => IsType (Maybe a) where
   showType Nothing  = id
 
 newtype GLType = GLType ClassName
-  deriving stock Eq
+  deriving stock (Eq)
   deriving (IsType,IsString) via String
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 data IType =
     NumberIType Integer
-  | ConcreteIType GLType deriving (Show,Eq)
+  | ConcreteIType GLType deriving (Eq)
 
 instance IsType IType where
   showType (NumberIType   n) = showType n

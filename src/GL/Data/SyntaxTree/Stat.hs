@@ -18,14 +18,14 @@ import           Data.Maybe
 
 newtype SetOp = SetOp { unSetOp :: String }
   deriving newtype (Eq, Ord, IsString)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 setOps :: [String]
 setOps =
   ["+=", "-=", "*=", "/=", "%=", "&&=", "||=", "^^=", "&=", "|=", "^=", "="]
 
-instance Read SetOp where
-  readPrec = SetOp <$> foldl1 (<++) (map (lift . RP.string) setOps)
+instance Lexable SetOp where
+  lexAP = SetOp <$> foldl1 (<++) (map (lift . RP.string) setOps)
 
 instance Enum SetOp where
   toEnum   = SetOp . (setOps !!)
@@ -49,7 +49,7 @@ data GLStat t
   | SBraces [GLStat t]
   | SExpr (GLExpr t)
   deriving stock (Functor,Foldable,Traversable)
-  deriving Show via (PrettyTree (GLStat t))
+  deriving Pretty via (PrettyTree (GLStat t))
 
 statExprs :: Traversal' (GLStat t) (GLExpr t)
 statExprs f (SIf e s1 s2) =
@@ -75,8 +75,8 @@ instance IsType t => Treeable (GLStat t) where
     Node "for" [toTree s1, toTree e, toTree s2, Node "do" [toTree s3]]
   toTree (SWhile   e s) = Node "while" [toTree e, Node "do" [toTree s]]
   toTree (SDoWhile e s) = Node "do" [toTree s, Node "while" [toTree e]]
-  toTree (SLet t n  e ) = Node ("let " ++ showTypeShow t n ++ " =") [toTree e]
-  toTree (SSet n op e ) = Node (show n ++ " " ++ show op) [toTree e]
+  toTree (SLet t n  e ) = Node ("let " ++ showTypeP t n ++ " =") [toTree e]
+  toTree (SSet n op e ) = Node (showPP n ++ " " ++ showPP op) [toTree e]
   toTree (SReturn e   ) = Node "return" [toTree e]
   toTree SBreak         = toTree "break"
   toTree SContinue      = toTree "continue"

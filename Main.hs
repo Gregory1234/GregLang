@@ -7,6 +7,7 @@ import           GL.Lexer
 import           GL.Parser
 import           GL.TypeChecker
 import           GL.Codegen.LLVM
+import           GL.Utils
 
 main :: IO ()
 main = do
@@ -14,12 +15,12 @@ main = do
   fileContent <- readFile inputFileArg
   case lexGregLang inputFileArg fileContent of
     (Left  err) -> putStrLn err
-    (Right tok) -> print tok *> case parseGregLang inputFileArg tok of
+    (Right tok) -> pprint tok *> case parseGregLang inputFileArg tok of
       (Left  err) -> putStrLn err
-      (Right ast) -> print ast *> case typeCheck ast of
+      (Right ast) -> pprint ast *> case typeCheck ast of
         (Left err) -> putStrLn err
         (Right ast') ->
-          print ast'
+          pprint ast'
             *> let out = codegen inputFileArg ast'
-               in  print out *> writeFile outputFileArg out
+               in  putStrLn out *> writeFile outputFileArg out
   return ()

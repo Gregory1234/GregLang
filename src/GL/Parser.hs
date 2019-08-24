@@ -27,7 +27,7 @@ satisfyT :: (Token -> Maybe a) -> Parser a
 satisfyT f = fromJust . f . _tokenVal <$> P.satisfy (isJust . f . _tokenVal)
 
 exactT :: Token -> Parser ()
-exactT t = P.label (show t) $ void $ P.satisfy ((== t) . _tokenVal)
+exactT t = P.label (showPP t) $ void $ P.satisfy ((== t) . _tokenVal)
 
 bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b
@@ -76,7 +76,7 @@ importParser :: Parser GLImport
 importParser = GLImport <$> preKw "import" packageParser
 
 packageParser :: Parser GLPackage
-packageParser = GLPackage <$> P.sepBy (show <$> ident) (kw ".")
+packageParser = GLPackage <$> P.sepBy (showPP <$> ident) (kw ".")
 
 classParser :: Parser (GLClass IType)
 classParser =
@@ -124,7 +124,8 @@ statParser = P.choice
   ]
  where
   sc = (<* optional (kw ";"))
-  so = P.label "<setting operator>" (satisfyT (^? _TKeyword . to show . _Show))
+  so =
+    P.label "<setting operator>" (satisfyT (^? _TKeyword . to showPP . _Pretty))
   forHelper =
     P.try (preKw "(" statParser <&> sc exprParser)
       <&> (statParser <* kw ")")
@@ -149,8 +150,8 @@ exprLevel op e = do
   foldM helper e1 es
  where
   helper a (b, c) = incType $ EOp a b c
-  bo = P.label "<binary operator>"
-               (satisfyT (^? _TKeyword . folding (readElem op)))
+  bo =
+    P.label "<binary operator>" (satisfyT (^? _TKeyword . folding (lexElem op)))
 
 exprLevels :: [[ExprOp]] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
 exprLevels = flip $ foldr exprLevel
@@ -158,7 +159,8 @@ exprLevels = flip $ foldr exprLevel
 exprPrefix :: Parser (GLExpr IType) -> Parser (GLExpr IType)
 exprPrefix e = (incType =<< (EPrefix <$> po <*> e)) <|> e
  where
-  po = P.label "<prefix operator>" (satisfyT (^? _TKeyword . to show . _Show))
+  po =
+    P.label "<prefix operator>" (satisfyT (^? _TKeyword . to showPP . _Pretty))
 
 exprExtParser :: Parser (GLExpr IType)
 exprExtParser =

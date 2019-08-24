@@ -13,10 +13,10 @@ import           Data.String
 newtype Ident =
   Ident { identString :: String }
   deriving newtype (Eq, Ord, IsString, Treeable)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
-instance Read Ident where
-  readPrec = Ident <$> lift
+instance Lexable Ident where
+  lexAP = Ident <$> lift
     ((:) <$> RP.satisfy (isAlpha &&& isLower ||| (== '_')) <*> RP.munch
       (isAlphaNum ||| (== '_'))
     )
@@ -24,11 +24,11 @@ instance Read Ident where
 newtype ClassName =
   ClassName { classNameString :: String }
   deriving newtype (Eq, Ord, IsString, Treeable)
-  deriving Show via ClearShow
+  deriving Pretty via ClearString
 
 
-instance Read ClassName where
-  readPrec = ClassName <$> lift
+instance Lexable ClassName where
+  lexAP = ClassName <$> lift
     ((:) <$> RP.satisfy (isAlpha &&& isUpper) <*> RP.munch
       (isAlphaNum ||| (== '_'))
     )

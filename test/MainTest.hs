@@ -91,7 +91,10 @@ instance Arbitrary Token where
 
 newtype TokenStream =
   TokenStream (NonEmpty LocToken)
-  deriving (Show)
+  deriving Show
+
+instance Show LocToken where
+  show = showPP
 
 arbitrarySpelling = return . spellToken
 
