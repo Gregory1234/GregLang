@@ -83,7 +83,7 @@ classParser =
   GLClass <$> (kw "class" *> tident) <*> P.many fieldParser <*> P.many funParser
 
 typeParser :: Parser GLType
-typeParser = GLType <$> tident
+typeParser = GLType Nothing <$> tident
 
 safeArg :: Parser (IType, Ident)
 safeArg = do

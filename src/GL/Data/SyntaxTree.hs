@@ -10,12 +10,11 @@ where
 
 
 import           GL.Utils
-import           GL.Type
 import           GL.Data.Ident
 import           GL.Data.SyntaxTree.Stat
 import           GL.Data.SyntaxTree.Expr
 import           Control.Lens
-import           Data.List
+import           GL.Type
 
 instance IsType t => Treeable (AST t) where
   toTree (AST p i f c) = Node
@@ -42,9 +41,6 @@ instance IsType t => Treeable (GLFun t) where
     ("fun " ++ showTypeP t n)
     (listToTree "args" (uncurry showTypeP <$> as) : map toTree s)
 
-instance Pretty GLPackage where
-  showPP (GLPackage s) = intercalate "." s
-
 instance Pretty GLImport where
   showPP (GLImport p) = "import" ++ showPP p
 
@@ -55,8 +51,6 @@ data AST t = AST
   , _astClasses :: [GLClass t]
   } deriving stock (Functor,Foldable,Traversable)
     deriving Pretty via (PrettyTree (AST t))
-
-newtype GLPackage = GLPackage { _packagePath :: [String] } deriving Eq
 
 newtype GLImport = GLImport { _importPackage :: GLPackage }
 
@@ -88,6 +82,3 @@ makeLenses ''GLImport
 makeLenses ''GLClass
 makeLenses ''GLField
 makeLenses ''GLFun
-
-importPath :: Iso' GLImport [String]
-importPath = importPackage . packagePath
