@@ -9,6 +9,7 @@ module GL.Utils
   , void
   , join
   , module Data.Default.Class
+  , module Data.Functor.Identity
   , module GL.Utils
   )
 where
@@ -25,6 +26,7 @@ import           Data.Maybe.HT
 import           Control.Monad
 import           Data.Default.Class
 import           Control.Lens
+import           Data.Functor.Identity
 
 class Treeable a where
   toTree :: a -> Tree String

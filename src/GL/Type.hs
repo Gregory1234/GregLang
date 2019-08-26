@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances, DerivingVia, OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances, DerivingVia, OverloadedStrings,
+  FlexibleContexts #-}
 
 module GL.Type
   ( module GL.Type
@@ -10,6 +11,7 @@ import           GL.Data.Ident
 import           Data.String
 import           Data.List.Split
 import           Data.List
+import           Control.Monad.Except
 
 class IsType t where
   showType :: t -> String -> String
@@ -41,6 +43,10 @@ instance Pretty GLPackage where
 data GLType = GLType (Maybe GLPackage) ClassName
   deriving stock Eq
 
+instance Pretty GLType where
+  showPP (GLType (Just p) c) = showPP p ++ '.' : showPP c
+  showPP (GLType Nothing  c) = showPP c
+
 instance IsType GLType where
   showType (GLType (Just p) c) = showType (showPP p ++ '.' : showPP c)
   showType (GLType Nothing  c) = showType (showPP c)
@@ -61,3 +67,20 @@ data IType =
 instance IsType IType where
   showType (NumberIType   n) = showType n
   showType (ConcreteIType t) = showType t
+
+tryType :: MonadError String m => IType -> m GLType
+tryType (NumberIType   _) = throwError "Couldn't get type"
+tryType (ConcreteIType t) = return t
+
+matchIType :: MonadError String m => IType -> IType -> m IType
+matchIType (NumberIType   a) (NumberIType   b) = return $ NumberIType a
+matchIType (ConcreteIType a) (NumberIType   b) = return $ ConcreteIType a
+matchIType (NumberIType   a) (ConcreteIType b) = return $ ConcreteIType b
+matchIType (ConcreteIType a) (ConcreteIType b)
+  | a == b
+  = return $ ConcreteIType a
+  | otherwise
+  = throwError $ "Cannot match types: " ++ showPP a ++ " and " ++ showPP b
+
+matchIType' :: MonadError String m => IType -> GLType -> m GLType
+matchIType' a b = matchIType a (ConcreteIType b) >>= tryType
