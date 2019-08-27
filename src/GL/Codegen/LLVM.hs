@@ -45,19 +45,19 @@ codegenFun Nothing (GLFun t (Ident n) a s) =
 codegenExpr
   :: GLExpr GLType
   -> StateT [L.Operand] (B.IRBuilderT B.ModuleBuilder) L.Operand
-codegenExpr (GLExpr "Int" (EIntLit i)) =
+codegenExpr (GLExpr "gl.Int" (EIntLit i)) =
   return $ L.ConstantOperand $ C.Int 64 i
 codegenExpr (GLExpr _ (EParen e)) = codegenExpr e
-codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "+" e2@(GLExpr "Int" _))) =
-  B.add <$> codegenExpr e1 *>>= codegenExpr e2
-codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "-" e2@(GLExpr "Int" _))) =
-  B.sub <$> codegenExpr e1 *>>= codegenExpr e2
-codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "*" e2@(GLExpr "Int" _))) =
-  B.mul <$> codegenExpr e1 *>>= codegenExpr e2
-codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "/" e2@(GLExpr "Int" _))) =
-  B.sdiv <$> codegenExpr e1 *>>= codegenExpr e2
-codegenExpr (GLExpr "Int" (EOp e1@(GLExpr "Int" _) "%" e2@(GLExpr "Int" _))) =
-  B.srem <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "+" e2@(GLExpr "gl.Int" _)))
+  = B.add <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "-" e2@(GLExpr "gl.Int" _)))
+  = B.sub <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "*" e2@(GLExpr "gl.Int" _)))
+  = B.mul <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "/" e2@(GLExpr "gl.Int" _)))
+  = B.sdiv <$> codegenExpr e1 *>>= codegenExpr e2
+codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "%" e2@(GLExpr "gl.Int" _)))
+  = B.srem <$> codegenExpr e1 *>>= codegenExpr e2
 
 codegenStat
   :: GLStat GLType -> StateT [L.Operand] (B.IRBuilderT B.ModuleBuilder) ()
@@ -66,5 +66,5 @@ codegenStat (SReturn e) = do
   emitTerm (Ret (Just i) [])
 
 typeToLLVM :: GLType -> L.Type
-typeToLLVM "Void" = L.VoidType
-typeToLLVM "Int"  = L.IntegerType 64
+typeToLLVM "gl.Void" = L.VoidType
+typeToLLVM "gl.Int"  = L.IntegerType 64

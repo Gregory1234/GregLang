@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, DerivingVia, OverloadedStrings,
-  FlexibleContexts #-}
+  FlexibleContexts, OverloadedLists, TypeFamilies, StandaloneDeriving #-}
 
 module GL.Type
   ( module GL.Type
@@ -12,6 +12,7 @@ import           Data.String
 import           Data.List.Split
 import           Data.List
 import           Control.Monad.Except
+import           GHC.Exts                       ( IsList(..) )
 
 class IsType t where
   showType :: t -> String -> String
@@ -28,6 +29,8 @@ instance IsType () where
 instance IsType String where
   showType s x = x ++ " : " ++ s
 
+deriving via String instance IsType ClassName
+
 instance IsType Integer where
   showType n x = x ++ " : <" ++ show n ++ ">"
 
@@ -40,47 +43,56 @@ newtype GLPackage = GLPackage { _packagePath :: [String] } deriving Eq
 instance Pretty GLPackage where
   showPP (GLPackage s) = intercalate "." s
 
-data GLType = GLType (Maybe GLPackage) ClassName
+instance IsList GLPackage where
+  type Item GLPackage = String
+  fromList = GLPackage
+  toList   = _packagePath
+
+data GLType = GLType GLPackage ClassName
   deriving stock Eq
 
 instance Pretty GLType where
-  showPP (GLType (Just p) c) = showPP p ++ '.' : showPP c
-  showPP (GLType Nothing  c) = showPP c
+  showPP (GLType [] c) = showPP c
+  showPP (GLType p  c) = showPP p ++ '.' : showPP c
 
 instance IsType GLType where
-  showType (GLType (Just p) c) = showType (showPP p ++ '.' : showPP c)
-  showType (GLType Nothing  c) = showType (showPP c)
+  showType (GLType [] c) = showType (showPP c)
+  showType (GLType p  c) = showType (showPP p ++ '.' : showPP c)
 
 instance IsString GLType where
   fromString x = helper (splitOn "." x)
    where
-    helper []       = GLType Nothing ""
-    helper [a     ] = GLType Nothing (fromString a)
+    helper []       = GLType [] ""
+    helper [a     ] = GLType [] (fromString a)
     helper (a : as) = case helper as of
-      (GLType (Just (GLPackage p)) c) -> GLType (Just (GLPackage (a : p))) c
-      (GLType Nothing              c) -> GLType (Just (GLPackage [a])) c
+      (GLType (GLPackage p) c) -> GLType (GLPackage (a : p)) c
 
 data IType =
-    NumberIType Integer
-  | ConcreteIType GLType deriving (Eq)
+    NumIType Integer
+  | PartIType ClassName
+  | ConIType GLType deriving (Eq)
+
+instance IsString IType where
+  fromString = ConIType . fromString
 
 instance IsType IType where
-  showType (NumberIType   n) = showType n
-  showType (ConcreteIType t) = showType t
+  showType (NumIType  n) = showType n
+  showType (PartIType t) = showType t
+  showType (ConIType  t) = showType t
 
-tryType :: MonadError String m => IType -> m GLType
-tryType (NumberIType   _) = throwError "Couldn't get type"
-tryType (ConcreteIType t) = return t
+instance Pretty IType where
+  showPP (NumIType  n) = showPP n
+  showPP (PartIType t) = showPP t
+  showPP (ConIType  t) = showPP t
 
 matchIType :: MonadError String m => IType -> IType -> m IType
-matchIType (NumberIType   a) (NumberIType   b) = return $ NumberIType a
-matchIType (ConcreteIType a) (NumberIType   b) = return $ ConcreteIType a
-matchIType (NumberIType   a) (ConcreteIType b) = return $ ConcreteIType b
-matchIType (ConcreteIType a) (ConcreteIType b)
-  | a == b
-  = return $ ConcreteIType a
-  | otherwise
-  = throwError $ "Cannot match types: " ++ showPP a ++ " and " ++ showPP b
-
-matchIType' :: MonadError String m => IType -> GLType -> m GLType
-matchIType' a b = matchIType a (ConcreteIType b) >>= tryType
+matchIType (ConIType a) (ConIType b) | a == b = return $ ConIType a
+matchIType (ConIType (GLType p a)) (PartIType b) | a == b =
+  return $ ConIType (GLType p a)
+matchIType (PartIType a) (ConIType (GLType p b)) | a == b =
+  return $ ConIType (GLType p a)
+matchIType (PartIType a) (PartIType b) | a == b = return $ PartIType a
+matchIType t            (NumIType _)            = return t
+matchIType (NumIType _) t                       = return t
+matchIType a b =
+  throwError $ "Could match types: " ++ showPP a ++ " and " ++ showPP b

@@ -88,6 +88,10 @@ headEither :: a -> [b] -> Either a b
 headEither x []      = Left x
 headEither _ (x : _) = Right x
 
+onlyEither :: a -> [b] -> Either a b
+onlyEither _ [x] = Right x
+onlyEither x _   = Left x
+
 eitherConcat :: Monoid m => [Either a m] -> Either a m
 eitherConcat (Left  x : _ ) = Left x
 eitherConcat (Right x : xs) = case eitherConcat xs of

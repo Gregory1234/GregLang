@@ -61,7 +61,7 @@ inc :: (MonadState a m, Num a) => m a
 inc = get <* modify (+ 1)
 
 incType :: GLExprU (GLExpr IType) -> Parser (GLExpr IType)
-incType a = GLExpr <$> (NumberIType <$> inc) <*> pure a
+incType a = GLExpr <$> (NumIType <$> inc) <*> pure a
 
 parser :: Parser (AST IType)
 parser =
@@ -82,14 +82,11 @@ classParser :: Parser (GLClass IType)
 classParser =
   GLClass <$> (kw "class" *> tident) <*> P.many fieldParser <*> P.many funParser
 
-typeParser :: Parser GLType
-typeParser = GLType Nothing <$> tident
-
 safeArg :: Parser (IType, Ident)
 safeArg = do
-  a <- optional typeParser
+  a <- optional tident
   i <- ident
-  t <- maybe (NumberIType <$> inc) (return . ConcreteIType) a
+  t <- maybe (NumIType <$> inc) (return . PartIType) a
   return (t, i)
 
 fieldParser :: Parser (GLField IType)
@@ -140,7 +137,7 @@ exprParser = P.try exprExtParser <|> exprBaseParser
 exprBaseParser :: Parser (GLExpr IType)
 exprBaseParser =
   GLExpr
-    <$> ((ConcreteIType <$> parens typeParser) <|> (NumberIType <$> inc))
+    <$> ((PartIType <$> parens tident) <|> (NumIType <$> inc))
     <*> exprUBaseParser
 
 exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
