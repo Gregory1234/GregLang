@@ -5,7 +5,6 @@ module GL.Parser
   )
 where
 
-import           Data.Maybe
 import           Data.Void
 import           GL.Data.SyntaxTree
 import           GL.Data.Token

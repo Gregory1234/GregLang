@@ -1,10 +1,11 @@
-{-# LANGUAGE TupleSections, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 
 module GL.TypeChecker
   ( typeCheck
   )
 where
 
+import qualified Data.List.HT                  as L
 import           GL.Type
 import           GL.Data.SyntaxTree
 import           GL.Data.Ident
@@ -14,6 +15,12 @@ import           Control.Monad.Reader
 import           Control.Monad.State
 import           Control.Monad.Writer
 import           Control.Monad.Except
+import           Control.Lens            hiding ( Context )
+
+data TypeConstraint = TypeEq IType IType
+
+instance Pretty TypeConstraint where
+  showPP (TypeEq a b) = showPP a ++ " ~ " ++ showPP b
 
 tryType :: (MonadError String m, MonadState Ctx m) => IType -> m GLType
 tryType (NumIType  _) = throwError "Couldn't get type"
@@ -24,60 +31,41 @@ matchIType'
   :: (MonadError String m, MonadState Ctx m) => IType -> GLType -> m GLType
 matchIType' a b = matchIType a (ConIType b) >>= tryType
 
-typeCheckAST :: AST IType -> Context (AST GLType)
+typeCheckAST :: AST IType -> WriterT [TypeConstraint] Context ()
 typeCheckAST (AST pn ims funs cs) =
-  AST pn ims <$> traverse typeCheckFun funs <*> traverse typeCheckClass cs
+  traverse typeCheckFun funs *> traverse_ typeCheckClass cs
  where
-  typeCheckFun :: GLFun IType -> Context (GLFun GLType)
-  typeCheckFun (GLFun t n a s) = do
-    (t', a', s') <- ctxRaiseAdd a (typeCheckStats pn Nothing (t, map fst a, s))
-    return $ GLFun t' n (zip a' (map snd a)) s'
-  typeCheckClass :: GLClass IType -> Context (GLClass GLType)
+  typeCheckFun :: GLFun IType -> WriterT [TypeConstraint] Context ()
+  typeCheckFun (GLFun t _ a s) = traverse_ (typeCheckStat t) s
+  typeCheckClass :: GLClass IType -> WriterT [TypeConstraint] Context ()
   typeCheckClass = undefined
 
-typeCheckStats
-  :: GLPackage
-  -> Maybe ClassName
-  -> (IType, [IType], [GLStat IType])
-  -> Context (GLType, [GLType], [GLStat GLType])
-typeCheckStats _ _ (rt, at, []) =
-  (, , []) <$> tryType rt <*> traverse tryType at
-typeCheckStats pn cn (rt, at, x : xs) =
-  let a  = typeCheckStat pn cn (rt, at, x)
-      as = typeCheckStats pn cn (rt, at, xs)
-  in  combine <$> a *>>= as
+typeCheckStat :: IType -> GLStat IType -> WriterT [TypeConstraint] Context ()
+typeCheckStat t (SReturn e) = do
+  typeCheckExpr e
+  tell [TypeEq t (_exprType e)]
+
+typeCheckExpr :: GLExpr IType -> WriterT [TypeConstraint] Context ()
+typeCheckExpr (GLExpr t (EIntLit _)) = tell [TypeEq t "gl.Int"]
+
+solveConstraints :: AST IType -> [TypeConstraint] -> Context (AST GLType)
+solveConstraints ast xs = traverse (joinFun $ helper <$> list xs) ast
  where
-  combine
-    :: (MonadError String m, MonadState Ctx m)
-    => (IType, [IType], GLStat IType)
-    -> (GLType, [GLType], [GLStat GLType])
-    -> m (GLType, [GLType], [GLStat GLType])
-  combine (a, b, c) (d, e, f) =
-    let x = tryType =<< matchIType a (ConIType d)
-        y = sequenceA $ zipWith matchIType' b e
-    in  (,,) <$> x <*> y <*> ((: f) <$> traverse tryType c)
-
-typeCheckStat
-  :: GLPackage
-  -> Maybe ClassName
-  -> (IType, [IType], GLStat IType)
-  -> Context (IType, [IType], GLStat IType)
-typeCheckStat pn cn (rt, at, SReturn e) = do
-  (at', e') <- typeCheckExpr pn cn (at, e)
-  rt'       <- matchIType rt (_exprType e')
-  return (rt', at', SReturn e')
-
-typeCheckExpr
-  :: GLPackage
-  -> Maybe ClassName
-  -> ([IType], GLExpr IType)
-  -> Context ([IType], GLExpr IType)
-typeCheckExpr pn cn (at, GLExpr t (EIntLit n)) =
-  (at, ) <$> (GLExpr <$> matchIType t "gl.Int" <*> pure (EIntLit n))
-typeCheckExpr pn cn (at, GLExpr t (EVar Nothing n [])) = do
-  vt <- single (ctxGetVars pn cn n)
-  t' <- matchIType t vt
-  return (at, GLExpr t' (EVar Nothing n []))
+  size = fromMaybe 0 (maximumOf (traverse . _NumIType) ast)
+  helper :: [IType] -> IType -> Context GLType
+  helper _ (ConIType  t) = return t
+  helper _ (PartIType t) = tryType $ PartIType t
+  helper l (NumIType  n) = tryType $ l !! fromIntegral n
+  blank = map NumIType [0 .. size]
+  list :: [TypeConstraint] -> Context [IType]
+  list [] = return blank
+  list (TypeEq (NumIType n) b : xs) =
+    zipWithM matchIType (replace' (NumIType n) b blank) =<< list xs
+  list (TypeEq a (NumIType n) : xs) =
+    zipWithM matchIType (replace' (NumIType n) a blank) =<< list xs
+  list (TypeEq a b : xs) = matchIType a b *> list xs
 
 typeCheck :: AST IType -> Either String (AST GLType)
-typeCheck a = runContext (typeCheckAST a) (globalContext a)
+typeCheck a = runContext
+  (solveConstraints a =<< execWriterT (typeCheckAST a))
+  (globalContext a)

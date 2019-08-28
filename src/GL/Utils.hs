@@ -8,8 +8,11 @@ module GL.Utils
   , ($>)
   , void
   , join
+  , traverse_
+  , zipWithM
   , module Data.Default.Class
   , module Data.Functor.Identity
+  , module Data.Maybe
   , module GL.Utils
   )
 where
@@ -23,10 +26,12 @@ import           Data.Bifunctor
 import           Data.Function
 import           Data.Functor                   ( ($>) )
 import           Data.Maybe.HT
+import           Data.Maybe
 import           Control.Monad
 import           Data.Default.Class
 import           Control.Lens
 import           Data.Functor.Identity
+import           Data.Foldable
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -121,6 +126,9 @@ infixl 4 *>>=
 (*>>=) :: (Monad m) => m (a -> m b) -> m a -> m b
 (*>>=) f a = join $ f <*> a
 
+joinFun :: (Monad m) => m (a -> m b) -> a -> m b
+joinFun f a = ($ a) =<< f
+
 class Pretty a where
   showPP :: a -> String
   default showPP :: Show a => a -> String
@@ -148,6 +156,11 @@ instance Treeable t => Pretty (PrettyTree t) where
 pprint :: Pretty a => a -> IO ()
 pprint = putStrLn . showPP
 
+showPPList :: Pretty a => [a] -> String
+showPPList []       = "[]"
+showPPList [x     ] = '[' : showPP x ++ "]"
+showPPList (x : xs) = '[' : showPP x ++ ',' : tail (showPPList xs)
+
 class Lexable a where
   lexAP :: ReadPrec a
   default lexAP :: Read a => ReadPrec a
@@ -168,3 +181,8 @@ instance Lexable Char
 
 _Pretty :: (Lexable a, Pretty a) => Prism' String a
 _Pretty = prism showPP $ \s -> second fst $ headEither s $ lexA s
+
+replace' :: Eq a => a -> a -> [a] -> [a]
+replace' a b [] = []
+replace' a b (x : xs) | x == a    = b : replace' a b xs
+                      | otherwise = x : replace' a b xs

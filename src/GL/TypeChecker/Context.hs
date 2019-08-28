@@ -8,7 +8,6 @@ where
 import           GL.Data.SyntaxTree
 import           GL.Data.Ident
 import           GL.Utils
-import           Data.Maybe
 import           Control.Monad.State
 import           Control.Monad.Except
 import           GL.Type

@@ -13,7 +13,6 @@ import qualified Text.ParserCombinators.ReadP  as RP
 import           Control.Lens            hiding ( op )
 import           Data.String
 import           Data.List
-import           Data.Maybe
 
 newtype ExprOp = ExprOp { unExprOp :: String }
   deriving newtype (Eq, Ord, IsString)

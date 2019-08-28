@@ -15,7 +15,6 @@ import           GL.Data.Ident
 import           GL.Type
 import           GL.Utils
 import           Data.String
-import           Data.Foldable
 import           Control.Monad.State
 
 codegen :: FilePath -> AST GLType -> String

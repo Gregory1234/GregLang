@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances, DerivingVia, OverloadedStrings,
-  FlexibleContexts, OverloadedLists, TypeFamilies, StandaloneDeriving #-}
+  FlexibleContexts, OverloadedLists, TypeFamilies, StandaloneDeriving,
+  TemplateHaskell #-}
 
 module GL.Type
   ( module GL.Type
@@ -12,6 +13,7 @@ import           Data.String
 import           Data.List.Split
 import           Data.List
 import           Control.Monad.Except
+import           Control.Lens
 import           GHC.Exts                       ( IsList(..) )
 
 class IsType t where
@@ -96,3 +98,5 @@ matchIType t            (NumIType _)            = return t
 matchIType (NumIType _) t                       = return t
 matchIType a b =
   throwError $ "Could match types: " ++ showPP a ++ " and " ++ showPP b
+
+makePrisms ''IType

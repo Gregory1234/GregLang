@@ -14,7 +14,6 @@ import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Data.String
 import           Data.List
-import           Data.Maybe
 
 newtype SetOp = SetOp { unSetOp :: String }
   deriving newtype (Eq, Ord, IsString)

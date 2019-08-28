@@ -19,7 +19,6 @@ import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
 import           GL.Data.Ident
 import           Data.String
-import           Data.Maybe
 import           Control.Lens
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
