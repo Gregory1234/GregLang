@@ -38,7 +38,6 @@ library
         transformers -any,
         lens -any,
         mtl -any,
-        data-default-class -any,
         llvm-hs-pure -any,
         llvm-hs-pretty >=0.6.2.0,
         text -any

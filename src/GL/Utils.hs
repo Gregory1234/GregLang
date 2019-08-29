@@ -8,11 +8,11 @@ module GL.Utils
   , ($>)
   , void
   , join
-  , traverse_
   , zipWithM
-  , module Data.Default.Class
   , module Data.Functor.Identity
   , module Data.Maybe
+  , module Data.Foldable
+  , toMaybe
   , module GL.Utils
   )
 where
@@ -28,9 +28,9 @@ import           Data.Functor                   ( ($>) )
 import           Data.Maybe.HT
 import           Data.Maybe
 import           Control.Monad
-import           Data.Default.Class
 import           Control.Lens
 import           Data.Functor.Identity
+import           Control.Monad.Except
 import           Data.Foldable
 
 class Treeable a where
@@ -104,27 +104,20 @@ eitherConcat (Right x : xs) = case eitherConcat xs of
   Right a -> Right (a <> x)
 eitherConcat [] = Right mempty
 
-setAt :: (Integral n, Default a) => n -> a -> [a] -> [a]
+setAt :: (Integral n) => n -> a -> [a] -> [a]
 setAt n _ _ | n < 0 = error "GL.Utils.setAt: negative index"
-setAt 0 a []        = [a]
-setAt n a []        = def : setAt (n - 1) a []
+setAt _ _ []        = error "GL.Utils.setAt: index out of range"
 setAt 0 a (_ : xs)  = a : xs
 setAt n a (x : xs)  = x : setAt (n - 1) a xs
-
-getAt :: (Integral n, Default a) => n -> [a] -> a
-getAt n _ | n < 0 = error "GL.Utils.getAt: negative index"
-getAt _ []        = def
-getAt 0 (x : _ )  = x
-getAt n (_ : xs)  = getAt (n - 1) xs
 
 tryTillStableM :: (Eq a, Monad m) => (a -> m a) -> a -> m a
 tryTillStableM f a = do
   b <- f a
-  if b == a then return a else tryTillStableM f b
+  if b == a then return b else tryTillStableM f b
 
-infixl 4 *>>=
-(*>>=) :: (Monad m) => m (a -> m b) -> m a -> m b
-(*>>=) f a = join $ f <*> a
+infixl 4 =<<*
+(=<<*) :: (Monad m) => m (a -> m b) -> m a -> m b
+(=<<*) f a = join $ f <*> a
 
 joinFun :: (Monad m) => m (a -> m b) -> a -> m b
 joinFun f a = ($ a) =<< f
@@ -156,10 +149,12 @@ instance Treeable t => Pretty (PrettyTree t) where
 pprint :: Pretty a => a -> IO ()
 pprint = putStrLn . showPP
 
-showPPList :: Pretty a => [a] -> String
-showPPList []       = "[]"
-showPPList [x     ] = '[' : showPP x ++ "]"
-showPPList (x : xs) = '[' : showPP x ++ ',' : tail (showPPList xs)
+showPPList :: (Foldable f, Pretty a) => f a -> String
+showPPList = foldr helper "[]"
+ where
+  helper a "[]"       = '[' : showPP a ++ "]"
+  helper a ('[' : xs) = '[' : showPP a ++ ',' : xs
+  helper _ _          = error "impossible"
 
 class Lexable a where
   lexAP :: ReadPrec a
@@ -182,7 +177,6 @@ instance Lexable Char
 _Pretty :: (Lexable a, Pretty a) => Prism' String a
 _Pretty = prism showPP $ \s -> second fst $ headEither s $ lexA s
 
-replace' :: Eq a => a -> a -> [a] -> [a]
-replace' a b [] = []
-replace' a b (x : xs) | x == a    = b : replace' a b xs
-                      | otherwise = x : replace' a b xs
+guardError :: MonadError b m => b -> Bool -> m ()
+guardError b False = throwError b
+guardError _ True  = return ()

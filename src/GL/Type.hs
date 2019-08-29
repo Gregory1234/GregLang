@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, DerivingVia, OverloadedStrings,
   FlexibleContexts, OverloadedLists, TypeFamilies, StandaloneDeriving,
-  TemplateHaskell #-}
+  TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module GL.Type
   ( module GL.Type
@@ -12,7 +12,6 @@ import           GL.Data.Ident
 import           Data.String
 import           Data.List.Split
 import           Data.List
-import           Control.Monad.Except
 import           Control.Lens
 import           GHC.Exts                       ( IsList(..) )
 
@@ -40,7 +39,8 @@ instance (IsType a) => IsType (Maybe a) where
   showType (Just a) = showType a
   showType Nothing  = id
 
-newtype GLPackage = GLPackage { _packagePath :: [String] } deriving Eq
+newtype GLPackage = GLPackage { _packagePath :: [String] }
+  deriving newtype (Eq, Show)
 
 instance Pretty GLPackage where
   showPP (GLPackage s) = intercalate "." s
@@ -50,8 +50,8 @@ instance IsList GLPackage where
   fromList = GLPackage
   toList   = _packagePath
 
-data GLType = GLType GLPackage ClassName
-  deriving stock Eq
+data GLType = GLType { typePackage :: GLPackage, typeClass :: ClassName}
+  deriving stock (Eq, Show)
 
 instance Pretty GLType where
   showPP (GLType [] c) = showPP c
@@ -72,7 +72,7 @@ instance IsString GLType where
 data IType =
     NumIType Integer
   | PartIType ClassName
-  | ConIType GLType deriving (Eq)
+  | ConIType GLType deriving (Eq, Show)
 
 instance IsString IType where
   fromString = ConIType . fromString
@@ -86,17 +86,5 @@ instance Pretty IType where
   showPP (NumIType  n) = showPP n
   showPP (PartIType t) = showPP t
   showPP (ConIType  t) = showPP t
-
-matchIType :: MonadError String m => IType -> IType -> m IType
-matchIType (ConIType a) (ConIType b) | a == b = return $ ConIType a
-matchIType (ConIType (GLType p a)) (PartIType b) | a == b =
-  return $ ConIType (GLType p a)
-matchIType (PartIType a) (ConIType (GLType p b)) | a == b =
-  return $ ConIType (GLType p a)
-matchIType (PartIType a) (PartIType b) | a == b = return $ PartIType a
-matchIType t            (NumIType _)            = return t
-matchIType (NumIType _) t                       = return t
-matchIType a b =
-  throwError $ "Could match types: " ++ showPP a ++ " and " ++ showPP b
 
 makePrisms ''IType

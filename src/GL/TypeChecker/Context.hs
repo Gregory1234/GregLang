@@ -9,6 +9,7 @@ import           GL.Data.SyntaxTree
 import           GL.Data.Ident
 import           GL.Utils
 import           Control.Monad.State
+import           Control.Monad.Reader
 import           Control.Monad.Except
 import           GL.Type
 
@@ -21,30 +22,52 @@ data CtxElement =
   | CtxLocal IType Ident
   | CtxType GLType
 
+instance Pretty CtxElement where
+  showPP (CtxFun p t n a) =
+    "fun "
+      ++ showPP n
+      ++ " : "
+      ++ showPPList a
+      ++ " -> "
+      ++ showPP t
+      ++ " in "
+      ++ showPP p
+  showPP (CtxField c t n) =
+    "field " ++ showPP n ++ " : " ++ showPP t ++ " in " ++ showPP c
+  showPP (CtxFun c t n a) =
+    "method "
+      ++ showPP n
+      ++ " : "
+      ++ showPPList a
+      ++ " -> "
+      ++ showPP t
+      ++ " in "
+      ++ showPP c
+  showPP (CtxLocal t n) = "local " ++ showPP n ++ " : " ++ showPP t
+  showPP (CtxType t   ) = "type " ++ showPP t
+
 ctxGetFuns
-  :: MonadState Ctx m
-  => GLPackage
-  -> Maybe ClassName
-  -> Ident
+  :: (MonadReader (GLPackage, Maybe ClassName) m, MonadState Ctx m)
+  => Ident
   -> m [(IType, [IType])]
-ctxGetFuns p c i = gets (mapMaybe (helper p c) . concat)
+ctxGetFuns i = ask >>= \(p, c) -> gets (mapMaybe (helper p c) . concat)
  where
   helper _ _ (CtxFun _ ft fi fa) | i == fi = Just (ft, fa)
   helper p (Just c) (CtxMethod (GLType fp fc) ft fi fa)
     | p == fp, c == fc, i == fi = Just (ft, fa)
   helper _ _ _ = Nothing
 
-ctxGetMethods
-  :: MonadState Ctx m => GLPackage -> ClassName -> Ident -> m [(IType, [IType])]
-ctxGetMethods p c i = gets (mapMaybe helper . concat)
+ctxGetMethods :: MonadState Ctx m => GLType -> Ident -> m [(IType, [IType])]
+ctxGetMethods c i = gets (mapMaybe helper . concat)
  where
-  helper (CtxMethod (GLType fp fc) ft fi fa) | p == fp, c == fc, i == fi =
-    Just (ft, fa)
+  helper (CtxMethod fc ft fi fa) | c == fc, i == fi = Just (ft, fa)
   helper _ = Nothing
 
 ctxGetVars
-  :: MonadState Ctx m => GLPackage -> Maybe ClassName -> Ident -> m [IType]
-ctxGetVars p c i = gets (mapMaybe (helper p c) . concat)
+  :: (MonadReader (GLPackage, Maybe ClassName) m, MonadState Ctx m)
+  => Ident
+  -> m [IType]
+ctxGetVars i = ask >>= \(p, c) -> gets (mapMaybe (helper p c) . concat)
  where
   helper _ _ (CtxFun _ ft fi []) | i == fi = Just ft
   helper p (Just c) (CtxMethod (GLType fp fc) ft fi [])

@@ -12,7 +12,7 @@ import           Data.String
 
 newtype Ident =
   Ident { identString :: String }
-  deriving newtype (Eq, Ord, IsString, Treeable)
+  deriving newtype (Eq, Ord, IsString, Treeable, Show)
   deriving Pretty via ClearString
 
 instance Lexable Ident where
@@ -23,7 +23,7 @@ instance Lexable Ident where
 
 newtype ClassName =
   ClassName { classNameString :: String }
-  deriving newtype (Eq, Ord, IsString, Treeable)
+  deriving newtype (Eq, Ord, IsString, Treeable, Show)
   deriving Pretty via ClearString
 
 
