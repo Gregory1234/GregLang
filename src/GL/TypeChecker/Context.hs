@@ -121,3 +121,6 @@ type Context = ContextT Identity
 
 runContextT m c = runExceptT $ evalStateT m c
 runContext m c = runExcept $ evalStateT m c
+
+ctxFromState :: State Ctx a -> Context a
+ctxFromState f = StateT $ return . runState f

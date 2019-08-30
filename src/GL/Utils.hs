@@ -13,6 +13,7 @@ module GL.Utils
   , module Data.Maybe
   , module Data.Foldable
   , toMaybe
+  , liftA2
   , module GL.Utils
   )
 where
@@ -31,7 +32,9 @@ import           Control.Monad
 import           Control.Lens
 import           Data.Functor.Identity
 import           Control.Monad.Except
+import           Control.Monad.State
 import           Data.Foldable
+import           Control.Applicative
 
 class Treeable a where
   toTree :: a -> Tree String
@@ -89,9 +92,9 @@ maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither _ (Just x) = Right x
 maybeToEither x Nothing  = Left x
 
-headEither :: a -> [b] -> Either a b
-headEither x []      = Left x
-headEither _ (x : _) = Right x
+headError :: MonadError a m => a -> [b] -> m b
+headError x []      = throwError x
+headError _ (x : _) = return x
 
 onlyEither :: a -> [b] -> Either a b
 onlyEither _ [x] = Right x
@@ -175,8 +178,14 @@ instance Lexable String
 instance Lexable Char
 
 _Pretty :: (Lexable a, Pretty a) => Prism' String a
-_Pretty = prism showPP $ \s -> second fst $ headEither s $ lexA s
+_Pretty = prism showPP $ \s -> second fst $ headError s $ lexA s
 
 guardError :: MonadError b m => b -> Bool -> m ()
 guardError b False = throwError b
 guardError _ True  = return ()
+
+foldMapA :: (Applicative f, Monoid m, Foldable t) => (a -> f m) -> t a -> f m
+foldMapA f = foldr (liftA2 mappend . f) (pure mempty)
+
+interchangeStateFun :: (a -> State s b) -> State s (a -> b)
+interchangeStateFun f = state $ \s -> (\a -> evalState (f a) s, s)

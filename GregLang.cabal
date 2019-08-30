@@ -17,6 +17,7 @@ library
         GL.Type
         GL.TypeChecker
         GL.TypeChecker.Context
+        GL.TypeChecker.Solver
         GL.Codegen.LLVM
         GL.Data.Token
         GL.Data.Ident
