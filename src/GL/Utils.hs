@@ -32,7 +32,6 @@ import           Control.Monad
 import           Control.Lens
 import           Data.Functor.Identity
 import           Control.Monad.Except
-import           Control.Monad.State
 import           Data.Foldable
 import           Control.Applicative
 
@@ -187,5 +186,11 @@ guardError _ True  = return ()
 foldMapA :: (Applicative f, Monoid m, Foldable t) => (a -> f m) -> t a -> f m
 foldMapA f = foldr (liftA2 mappend . f) (pure mempty)
 
-interchangeStateFun :: (a -> State s b) -> State s (a -> b)
-interchangeStateFun f = state $ \s -> (\a -> evalState (f a) s, s)
+maybeToAlt :: Alternative m => Maybe a -> m a
+maybeToAlt (Just a) = pure a
+maybeToAlt Nothing  = empty
+
+fairAppend :: [a] -> [a] -> [a]
+fairAppend (x : xs) (y : ys) = x : y : fairAppend xs ys
+fairAppend []       y        = y
+fairAppend x        []       = x
