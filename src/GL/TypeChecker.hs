@@ -43,7 +43,14 @@ typeCheckExpr (GLExpr t (EParen e)) =
   typeCheckExpr e <&&&> return (typeEq t (_exprType e))
 typeCheckExpr (GLExpr t (EVar Nothing n [])) =
   typeEq t <$> single (ctxGetVars n)
-
+typeCheckExpr (GLExpr t (EOp e1 op e2)) = typeAll'
+  [ typeCheckExpr e1
+  , typeCheckExpr e2
+  , typeAny
+  .   fmap (zipTypeEq [t, _exprType e1, _exprType e2] . uncurry (:))
+  .   filter ((== 2) . length . snd)
+  <$> ctxGetFuns (Ident $ showPP op)
+  ]
 
 typeCheck :: AST IType -> Either String (AST GLType)
 typeCheck a = runContext (solveConstr a =<< typeCheckAST a) (globalContext a)

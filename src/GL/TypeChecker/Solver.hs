@@ -15,17 +15,20 @@ import           Control.Monad.Writer
 import           Control.Monad.Except
 import           Data.List
 import           Control.Lens            hiding ( Context )
-import           Debug.Trace
-
-traceN s a = trace (s ++ show a) a
 
 type TypeConstraint = [[(IType, IType)]]
 
 typeEq :: IType -> IType -> TypeConstraint
 typeEq a b = [[(a, b)]]
 
+zipTypeEq :: [IType] -> [IType] -> TypeConstraint
+zipTypeEq = ((.) . (.)) typeAll (zipWith typeEq)
+
 typeAll :: [TypeConstraint] -> TypeConstraint
-typeAll = foldr typeAnd []
+typeAll = foldr typeAnd [[]]
+
+typeAll' :: Applicative f => [f TypeConstraint] -> f TypeConstraint
+typeAll' = foldr (<&&&>) (pure [[]])
 
 typeAnd :: TypeConstraint -> TypeConstraint -> TypeConstraint
 typeAnd = liftA2 (++)
@@ -33,6 +36,19 @@ typeAnd = liftA2 (++)
 (<&&&>)
   :: Applicative f => f TypeConstraint -> f TypeConstraint -> f TypeConstraint
 (<&&&>) = liftA2 typeAnd
+
+typeAny :: [TypeConstraint] -> TypeConstraint
+typeAny = foldr typeOr []
+
+typeAny' :: Applicative f => [f TypeConstraint] -> f TypeConstraint
+typeAny' = foldr (<|||>) (pure [])
+
+typeOr :: TypeConstraint -> TypeConstraint -> TypeConstraint
+typeOr = fairAppend
+
+(<|||>)
+  :: Applicative f => f TypeConstraint -> f TypeConstraint -> f TypeConstraint
+(<|||>) = liftA2 typeOr
 
 tryType :: (MonadError String m, MonadState Ctx m) => IType -> m GLType
 tryType (NumIType  _) = throwError "Couldn't get type"
@@ -45,14 +61,13 @@ solveConstr a t = traverse (joinFun $ helper <$> solver t) a
   size = fromIntegral (lengthOf (traverse . _NumIType) a) - 1
   helper _ (ConIType  t) = return t
   helper _ (PartIType t) = tryType $ PartIType t
-  helper l (NumIType  n) = tryType $ traceN "step 4 " $ l !! fromIntegral n
+  helper l (NumIType  n) = tryType $ l !! fromIntegral n
   solver =
     single
       . fmap
-          ( map (\a -> subst a . NumIType <$> [0 .. size])
-          . ($ [])
-          . foldr1 (appDb fairAppend)
-          . map (foldr1 (>=>))
+          (map (\a -> subst a . NumIType <$> [0 .. size]) . ($ []) . foldr
+            (appDb fairAppend . foldr1 (>=>))
+            (const [])
           )
       . (traverse . traverse . uncurry $ (===))
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, OverloadedLists #-}
 
 module GL.TypeChecker.Context
   ( module GL.TypeChecker.Context
@@ -21,6 +21,7 @@ data CtxElement =
   | CtxMethod GLType IType Ident [IType]
   | CtxLocal IType Ident
   | CtxType GLType
+    deriving (Show)
 
 instance Pretty CtxElement where
   showPP (CtxFun p t n a) =
@@ -98,7 +99,16 @@ ctxRaiseAdd :: MonadState Ctx m => [(IType, Ident)] -> m a -> m a
 ctxRaiseAdd xs m = modify (map (uncurry CtxLocal) xs :) *> m <* modify tail
 
 preludeContext :: Ctx
-preludeContext = [[CtxType "gl.Int"]]
+preludeContext =
+  [ [ CtxType "gl.Int"
+    , op ["gl"] "gl.Int" "+"
+    , op ["gl"] "gl.Int" "-"
+    , op ["gl"] "gl.Int" "*"
+    , op ["gl"] "gl.Int" "/"
+    , op ["gl"] "gl.Int" "%"
+    ]
+  ]
+  where op p t n = CtxFun p t n [t, t]
 
 globalContext :: AST IType -> Ctx
 globalContext (AST pn _ f cs) =
