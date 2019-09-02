@@ -7,7 +7,7 @@ where
 
 import           GL.TypeChecker.Context
 import           GL.Utils
-import           GL.AST
+import           GL.SyntaxTree
 import           GL.Type
 import           Control.Monad.Reader
 import           Control.Monad.State

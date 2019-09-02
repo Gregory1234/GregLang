@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
   GeneralizedNewtypeDeriving, TemplateHaskell #-}
-module GL.AST.Expr
-  ( module GL.AST.Expr
+module GL.SyntaxTree.Expr
+  ( module GL.SyntaxTree.Expr
   )
 where
 

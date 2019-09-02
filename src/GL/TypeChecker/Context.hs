@@ -5,7 +5,7 @@ module GL.TypeChecker.Context
   )
 where
 
-import           GL.AST
+import           GL.SyntaxTree
 import           GL.Ident
 import           GL.Utils
 import           Control.Monad.State

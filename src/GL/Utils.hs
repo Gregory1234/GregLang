@@ -36,6 +36,7 @@ import           Data.Foldable
 import           Control.Applicative
 import           Debug.Trace
 
+traceN :: Show a => String -> a -> a
 traceN s a = trace (s ++ show a) a
 
 class Treeable a where

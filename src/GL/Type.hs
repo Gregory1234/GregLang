@@ -8,7 +8,7 @@ module GL.Type
 where
 
 import           GL.Utils
-import           GL.Data.Ident
+import           GL.Ident
 import           Data.String
 import           Data.List.Split
 import           Data.List

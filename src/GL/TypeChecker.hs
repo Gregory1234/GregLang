@@ -5,31 +5,31 @@ module GL.TypeChecker
   )
 where
 
-import qualified Data.List.HT                  as L
 import           GL.Type
-import           GL.Data.SyntaxTree
-import           GL.Data.Ident
+import           GL.SyntaxTree
+import           GL.Ident
 import           GL.Utils
 import           GL.TypeChecker.Context
 import           GL.TypeChecker.Solver
 import           Control.Monad.Reader
-import           Control.Monad.State
 import           Control.Monad.Writer
-import           Control.Monad.Except
-import           Control.Lens            hiding ( Context )
-import           Data.Monoid
 
 type RContext = ReaderT (GLPackage, Maybe ClassName) Context
 
+foldMapAp
+  :: (Applicative f1, Applicative f2, Monoid a1, Foldable t)
+  => (a2 -> f1 (f2 a1))
+  -> t a2
+  -> f1 (f2 a1)
 foldMapAp f = (getAp <$>) . foldMapA ((Ap <$>) . f)
 
 typeCheckAST :: AST IType -> Context TypeConstraint
-typeCheckAST (AST pn ims funs cs) =
+typeCheckAST (AST pn _ funs cs) =
   foldMapAp typeCheckFun funs <&&&> foldMapAp typeCheckClass cs
  where
   typeCheckFun :: GLFun IType -> Context TypeConstraint
   typeCheckFun (GLFun t _ a s) = ctxRaiseAdd a
-    $ foldMapAp (\a -> runReaderT (typeCheckStat t a) (pn, Nothing)) s
+    $ foldMapAp (\s' -> runReaderT (typeCheckStat t s') (pn, Nothing)) s
   typeCheckClass :: GLClass IType -> Context TypeConstraint
   typeCheckClass = undefined
 

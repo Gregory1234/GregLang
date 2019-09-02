@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia, DeriveFunctor, DeriveFoldable,
   DeriveTraversable #-}
 
-module GL.Data.SyntaxTree
-  ( module GL.Data.SyntaxTree
-  , module GL.Data.SyntaxTree.Stat
-  , module GL.Data.SyntaxTree.Expr
+module GL.SyntaxTree
+  ( module GL.SyntaxTree
+  , module GL.SyntaxTree.Stat
+  , module GL.SyntaxTree.Expr
   )
 where
 
 
 import           GL.Utils
-import           GL.Data.Ident
-import           GL.Data.SyntaxTree.Stat
-import           GL.Data.SyntaxTree.Expr
+import           GL.Ident
+import           GL.SyntaxTree.Stat
+import           GL.SyntaxTree.Expr
 import           Control.Lens
 import           GL.Type
 

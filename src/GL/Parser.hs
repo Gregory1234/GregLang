@@ -6,7 +6,7 @@ module GL.Parser
 where
 
 import           Data.Void
-import           GL.AST
+import           GL.SyntaxTree
 import           GL.Token
 import           GL.Ident
 import           GL.Type

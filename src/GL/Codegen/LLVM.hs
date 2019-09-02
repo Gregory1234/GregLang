@@ -10,7 +10,7 @@ import           LLVM.AST.Constant             as C
 import           LLVM.Pretty                   as L
 import           Data.Text.Lazy                as T
 import           LLVM.IRBuilder                as B
-import           GL.AST
+import           GL.SyntaxTree
 import           GL.Ident
 import           GL.Type
 import           GL.Utils

@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards, FlexibleInstances, TypeFamilies,
    Strict, DerivingVia, GeneralizedNewtypeDeriving #-}
 
-module GL.Data.Token
-  ( module GL.Data.Token
+module GL.Token
+  ( module GL.Token
   )
 where
 
@@ -17,7 +17,7 @@ import           GL.Utils
 import qualified Text.Megaparsec               as P
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
-import           GL.Data.Ident
+import           GL.Ident
 import           Data.String
 import           Control.Lens
 
