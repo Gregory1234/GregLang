@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingVia, GeneralizedNewtypeDeriving #-}
-module GL.Data.Ident
-  ( module GL.Data.Ident
+module GL.Ident
+  ( module GL.Ident
   )
 where
 

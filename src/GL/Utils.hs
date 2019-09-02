@@ -34,6 +34,9 @@ import           Data.Functor.Identity
 import           Control.Monad.Except
 import           Data.Foldable
 import           Control.Applicative
+import           Debug.Trace
+
+traceN s a = trace (s ++ show a) a
 
 class Treeable a where
   toTree :: a -> Tree String

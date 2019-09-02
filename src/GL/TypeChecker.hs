@@ -34,13 +34,14 @@ typeCheckAST (AST pn ims funs cs) =
   typeCheckClass = undefined
 
 typeCheckStat :: IType -> GLStat IType -> RContext TypeConstraint
-typeCheckStat t (SReturn e) =
-  typeCheckExpr e <&&&> return (typeEq t (_exprType e))
+typeCheckStat _ (SLet t i e) =
+  typeCheckExpr e <&&&> typeEq' t (_exprType e) <* ctxAdd t i
+typeCheckStat t (SReturn e) = typeCheckExpr e <&&&> typeEq' t (_exprType e)
 
 typeCheckExpr :: GLExpr IType -> RContext TypeConstraint
-typeCheckExpr (GLExpr t (EIntLit _)) = return $ typeEq t "gl.Int"
+typeCheckExpr (GLExpr t (EIntLit _)) = typeEq' t "gl.Int"
 typeCheckExpr (GLExpr t (EParen e)) =
-  typeCheckExpr e <&&&> return (typeEq t (_exprType e))
+  typeCheckExpr e <&&&> typeEq' t (_exprType e)
 typeCheckExpr (GLExpr t (EVar Nothing n [])) =
   typeEq t <$> single (ctxGetVars n)
 typeCheckExpr (GLExpr t (EOp e1 op e2)) = typeAll'

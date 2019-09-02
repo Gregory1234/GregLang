@@ -6,7 +6,7 @@ module GL.Lexer
 where
 
 import           Data.Char
-import           GL.Data.Token
+import           GL.Token
 import qualified Text.Megaparsec               as P
 import           GL.Utils
 

@@ -1,13 +1,13 @@
 {-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
   GeneralizedNewtypeDeriving, TemplateHaskell #-}
-module GL.Data.SyntaxTree.Expr
-  ( module GL.Data.SyntaxTree.Expr
+module GL.AST.Expr
+  ( module GL.AST.Expr
   )
 where
 
 import           GL.Utils
 import           GL.Type
-import           GL.Data.Ident
+import           GL.Ident
 import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Control.Lens            hiding ( op )

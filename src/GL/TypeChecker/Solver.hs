@@ -7,7 +7,7 @@ where
 
 import           GL.TypeChecker.Context
 import           GL.Utils
-import           GL.Data.SyntaxTree
+import           GL.AST
 import           GL.Type
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -20,6 +20,9 @@ type TypeConstraint = [[(IType, IType)]]
 
 typeEq :: IType -> IType -> TypeConstraint
 typeEq a b = [[(a, b)]]
+
+typeEq' :: Applicative f => IType -> IType -> f TypeConstraint
+typeEq' a b = pure (typeEq a b)
 
 zipTypeEq :: [IType] -> [IType] -> TypeConstraint
 zipTypeEq = ((.) . (.)) typeAll (zipWith typeEq)

@@ -6,9 +6,9 @@ module GL.Parser
 where
 
 import           Data.Void
-import           GL.Data.SyntaxTree
-import           GL.Data.Token
-import           GL.Data.Ident
+import           GL.AST
+import           GL.Token
+import           GL.Ident
 import           GL.Type
 import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( (<|>) )
@@ -136,7 +136,7 @@ exprParser = P.try exprExtParser <|> exprBaseParser
 exprBaseParser :: Parser (GLExpr IType)
 exprBaseParser =
   GLExpr
-    <$> ((PartIType <$> parens tident) <|> (NumIType <$> inc))
+    <$> ((PartIType <$> P.try (parens tident)) <|> (NumIType <$> inc))
     <*> exprUBaseParser
 
 exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)

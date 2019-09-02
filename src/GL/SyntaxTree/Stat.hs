@@ -1,14 +1,14 @@
 {-# LANGUAGE DerivingVia, DeriveFunctor, DeriveFoldable, DeriveTraversable,
   GeneralizedNewtypeDeriving #-}
-module GL.Data.SyntaxTree.Stat
-  ( module GL.Data.SyntaxTree.Stat
+module GL.AST.Stat
+  ( module GL.AST.Stat
   )
 where
 
 import           GL.Utils
 import           GL.Type
-import           GL.Data.Ident
-import           GL.Data.SyntaxTree.Expr
+import           GL.Ident
+import           GL.AST.Expr
 import           Control.Lens                   ( Traversal' )
 import           Text.Read
 import qualified Text.ParserCombinators.ReadP  as RP

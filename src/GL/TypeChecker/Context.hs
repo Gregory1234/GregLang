@@ -5,8 +5,8 @@ module GL.TypeChecker.Context
   )
 where
 
-import           GL.Data.SyntaxTree
-import           GL.Data.Ident
+import           GL.AST
+import           GL.Ident
 import           GL.Utils
 import           Control.Monad.State
 import           Control.Monad.Reader

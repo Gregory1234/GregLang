@@ -5,7 +5,7 @@ module Main where
 import           Data.Char
 import qualified Data.List.NonEmpty            as NE
 import           Data.List.NonEmpty             ( NonEmpty(..) )
-import           GL.Data.Token
+import           GL.Token
 import           GL.Lexer
 import           Test.Tasty                     ( TestTree
                                                 , defaultMain
@@ -14,7 +14,7 @@ import           Test.Tasty                     ( TestTree
 import           Test.Tasty.QuickCheck
 import qualified Text.Megaparsec               as P
 import           GL.Utils
-import           GL.Data.Ident
+import           GL.Ident
 
 instance Arbitrary Keyword where
   arbitrary = elements enumerate
