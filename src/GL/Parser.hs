@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleInstances, TypeFamilies,
+  FlexibleContexts, TypeApplications #-}
 
 module GL.Parser
   ( parseGregLang
@@ -22,6 +23,11 @@ import           Control.Applicative
 
 type Parser = P.ParsecT Void [LocToken] (State Integer)
 
+class (P.MonadParsec Void [LocToken] (ParserOf a)) => Parsable a where
+  type ParserOf a :: * -> *
+  type ParserOf a = Parser
+  parser :: ParserOf a a
+
 satisfyT :: (Token -> Maybe a) -> Parser a
 satisfyT f = fromJust . f . _tokenVal <$> P.satisfy (isJust . f . _tokenVal)
 
@@ -37,11 +43,11 @@ braces = bracketAny (kw "{") (kw "}")
 parens :: Parser a -> Parser a
 parens = bracketAny (kw "(") (kw ")")
 
-ident :: Parser Ident
-ident = P.label "<ident>" $ satisfyT (^? _TIdent)
+instance Parsable Ident where
+  parser = P.label "<ident>" $ satisfyT (^? _TIdent)
 
-tident :: Parser ClassName
-tident = P.label "<type ident>" $ satisfyT (^? _TTypeIdent)
+instance Parsable ClassName where
+  parser = P.label "<type ident>" $ satisfyT (^? _TTypeIdent)
 
 kw :: Keyword -> Parser ()
 kw = exactT . TKeyword
@@ -62,81 +68,83 @@ inc = get <* modify (+ 1)
 incType :: GLExprU (GLExpr IType) -> Parser (GLExpr IType)
 incType a = GLExpr <$> (NumIType <$> inc) <*> pure a
 
-parser :: Parser (AST IType)
-parser =
-  bracketAny (exactT TBegin) P.eof
-    $   AST
-    <$> preKw "package" packageParser
-    <*> P.many importParser
-    <*> P.many funParser
-    <*> P.many classParser
+instance Parsable (AST IType) where
+  parser =
+    bracketAny (exactT TBegin) P.eof
+      $   AST
+      <$> preKw "package" parser
+      <*> P.many parser
+      <*> P.many parser
+      <*> P.many parser
 
-importParser :: Parser GLImport
-importParser = GLImport <$> preKw "import" packageParser
+instance Parsable GLImport where
+  parser = GLImport <$> preKw "import" parser
 
-packageParser :: Parser GLPackage
-packageParser = GLPackage <$> P.sepBy (showPP <$> ident) (kw ".")
+instance Parsable Package where
+  parser = Package <$> P.sepBy (showPP <$> parser @Ident) (kw ".")
 
-classParser :: Parser (GLClass IType)
-classParser =
-  GLClass <$> (kw "class" *> tident) <*> P.many fieldParser <*> P.many funParser
+instance Parsable (GLClass IType) where
+  parser =
+    GLClass <$> (kw "class" *> parser) <*> P.many parser <*> P.many parser
 
 safeArg :: Parser (IType, Ident)
 safeArg = do
-  a <- optional tident
-  i <- ident
+  a <- optional parser
+  i <- parser
   t <- maybe (NumIType <$> inc) (return . PartIType) a
   return (t, i)
 
-fieldParser :: Parser (GLField IType)
-fieldParser =
-  P.try
-    $   uncurry GLField
-    <$> safeArg
-    <*> (optional (preKw "=" exprParser) <* optional (kw ";"))
+instance Parsable (GLField IType) where
+  parser =
+    P.try
+      $   uncurry GLField
+      <$> safeArg
+      <*> (optional (preKw "=" parser) <* optional (kw ";"))
 
-funParser :: Parser (GLFun IType)
-funParser =
-  uncurry GLFun
-    <$> safeArg
-    <*> optionL (parens $ maybeCommas safeArg)
-    <*> braces (P.many statParser)
+instance Parsable (GLFun IType) where
+  parser =
+    uncurry GLFun
+      <$> safeArg
+      <*> optionL (parens $ maybeCommas safeArg)
+      <*> braces (P.many parser)
 
-statParser :: Parser (GLStat IType)
-statParser = P.choice
-  [ SIf <$> preKw "if" exprParser <*> statParser <*> optional
-    (preKw "else" statParser)
-  , (uncurry . uncurry) SFor <$> preKw "for" forHelper <*> statParser
-  , SWhile <$> preKw "while" exprParser <*> statParser
-  , sc $ flip SDoWhile <$> preKw "do" statParser <*> preKw "while" exprParser
-  , sc $ uncurry SLet <$> preKw "let" safeArg <*> preKw "=" exprParser
-  , sc $ P.try (SSet <$> ident <*> so) <*> exprParser
-  , sc $ SReturn <$> preKw "return" exprParser
-  , sc $ kw "break" $> SBreak
-  , sc $ kw "continue" $> SContinue
-  , kw ";" $> SNoOp
-  , SBraces <$> braces (P.many statParser)
-  , sc $ SExpr <$> exprParser
-  ]
- where
-  sc = (<* optional (kw ";"))
-  so =
-    P.label "<setting operator>" (satisfyT (^? _TKeyword . to showPP . _Pretty))
-  forHelper =
-    P.try (preKw "(" statParser <&> sc exprParser)
-      <&> (statParser <* kw ")")
-      <|> statParser
-      <&> sc exprParser
-      <&> statParser
+instance Parsable (GLStat IType) where
+  parser = P.choice
+    [ SIf <$> preKw "if" parser <*> parser <*> optional (preKw "else" parser)
+    , (uncurry . uncurry) SFor
+    <$> preKw
+          "for"
+          (   P.try (preKw "(" parser <&> sc parser)
+          <&> (parser <* kw ")")
+          <|> parser
+          <&> sc parser
+          <&> parser
+          )
+    <*> parser
+    , SWhile <$> preKw "while" parser <*> parser
+    , sc $ flip SDoWhile <$> preKw "do" parser <*> preKw "while" parser
+    , sc $ uncurry SLet <$> preKw "let" safeArg <*> preKw "=" parser
+    , sc $ P.try (SSet <$> parser <*> so) <*> parser
+    , sc $ SReturn <$> preKw "return" parser
+    , sc $ kw "break" $> SBreak
+    , sc $ kw "continue" $> SContinue
+    , kw ";" $> SNoOp
+    , SBraces <$> braces (P.many parser)
+    , sc $ SExpr <$> parser
+    ]
+   where
+    sc = (<* optional (kw ";"))
+    so = P.label "<setting operator>"
+                 (satisfyT (^? _TKeyword . to showPP . _Pretty))
 
 
-exprParser :: Parser (GLExpr IType)
-exprParser = P.try exprExtParser <|> exprBaseParser
+instance Parsable (GLExpr IType) where
+  parser = P.try exprExtParser <|> exprBaseParser
 
 exprBaseParser :: Parser (GLExpr IType)
 exprBaseParser =
   GLExpr
-    <$> ((PartIType <$> P.try (parens tident)) <|> (NumIType <$> inc))
+    <$> ((PartIType <$> P.try (parens parser)) <|> (NumIType <$> inc))
     <*> exprUBaseParser
 
 exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
@@ -181,10 +189,10 @@ exprUBaseParser = do
     , litParser "<float literal>"  EFloatLit  _TFloatLit
     , litParser "<char literal>"   ECharLit   _TCharLit
     , litParser "<string literal>" EStringLit _TStringLit
-    , EVar Nothing <$> ident <*> optionL (parens (maybeCommas exprParser))
-    , EParen <$> parens exprParser
+    , EVar Nothing <$> parser <*> optionL (parens (maybeCommas parser))
+    , EParen <$> parens parser
     ]
-  ds <- P.many (preKw "." ident <&> optionL (parens (maybeCommas exprParser)))
+  ds <- P.many (preKw "." parser <&> optionL (parens (maybeCommas parser)))
   foldM helper e ds
  where
   litParser n f g = P.label n $ f <$> satisfyT (^? g)

@@ -16,7 +16,7 @@ import           GL.Type
 type Ctx = [[CtxElement]]
 
 data CtxElement =
-    CtxFun GLPackage IType Ident [IType]
+    CtxFun Package IType Ident [IType]
   | CtxField GLType IType Ident
   | CtxMethod GLType IType Ident [IType]
   | CtxLocal IType Ident
@@ -48,7 +48,7 @@ instance Pretty CtxElement where
   showPP (CtxType t   ) = "type " ++ showPP t
 
 ctxGetFuns
-  :: (MonadReader (GLPackage, Maybe ClassName) m, MonadState Ctx m)
+  :: (MonadReader (Package, Maybe ClassName) m, MonadState Ctx m)
   => Ident
   -> m [(IType, [IType])]
 ctxGetFuns i = ask >>= \(p, c) -> gets (mapMaybe (helper p c) . concat)
@@ -65,7 +65,7 @@ ctxGetMethods c i = gets (mapMaybe helper . concat)
   helper _ = Nothing
 
 ctxGetVars
-  :: (MonadReader (GLPackage, Maybe ClassName) m, MonadState Ctx m)
+  :: (MonadReader (Package, Maybe ClassName) m, MonadState Ctx m)
   => Ident
   -> m [IType]
 ctxGetVars i = ask >>= \(p, c) -> gets (mapMaybe (helper p c) . concat)
@@ -83,7 +83,7 @@ ctxGetFields c i = gets (mapMaybe helper . concat)
   helper (CtxField fc ft fi) | c == fc, i == fi = Just ft
   helper _ = Nothing
 
-ctxGetClasses :: MonadState Ctx m => ClassName -> m [GLPackage]
+ctxGetClasses :: MonadState Ctx m => ClassName -> m [Package]
 ctxGetClasses c = gets (mapMaybe helper . concat)
  where
   helper (CtxType (GLType tp tc)) | c == tc = Just tp

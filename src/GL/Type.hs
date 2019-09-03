@@ -39,18 +39,18 @@ instance (IsType a) => IsType (Maybe a) where
   showType (Just a) = showType a
   showType Nothing  = id
 
-newtype GLPackage = GLPackage { _packagePath :: [String] }
+newtype Package = Package { packagePath :: [String] }
   deriving newtype (Eq, Show)
 
-instance Pretty GLPackage where
-  showPP (GLPackage s) = intercalate "." s
+instance Pretty Package where
+  showPP (Package s) = intercalate "." s
 
-instance IsList GLPackage where
-  type Item GLPackage = String
-  fromList = GLPackage
-  toList   = _packagePath
+instance IsList Package where
+  type Item Package = String
+  fromList = Package
+  toList   = packagePath
 
-data GLType = GLType { typePackage :: GLPackage, typeClass :: ClassName}
+data GLType = GLType { typePackage :: Package, typeClass :: ClassName}
   deriving stock (Eq, Show)
 
 instance Pretty GLType where
@@ -67,7 +67,7 @@ instance IsString GLType where
     helper []       = GLType [] ""
     helper [a     ] = GLType [] (fromString a)
     helper (a : as) = case helper as of
-      (GLType (GLPackage p) c) -> GLType (GLPackage (a : p)) c
+      (GLType (Package p) c) -> GLType (Package (a : p)) c
 
 data IType =
     NumIType Integer

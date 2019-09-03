@@ -14,7 +14,7 @@ import           GL.TypeChecker.Solver
 import           Control.Monad.Reader
 import           Control.Monad.Writer
 
-type RContext = ReaderT (GLPackage, Maybe ClassName) Context
+type RContext = ReaderT (Package, Maybe ClassName) Context
 
 foldMapAp
   :: (Applicative f1, Applicative f2, Monoid a1, Foldable t)

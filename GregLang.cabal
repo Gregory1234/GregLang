@@ -11,13 +11,13 @@ extra-source-files:
 library
     exposed-modules:
         GL.Args
-        GL.SyntaxTree
-        GL.SyntaxTree.Expr
-        GL.SyntaxTree.Stat
         GL.Codegen.LLVM
         GL.Ident
         GL.Lexer
         GL.Parser
+        GL.SyntaxTree
+        GL.SyntaxTree.Expr
+        GL.SyntaxTree.Stat
         GL.Token
         GL.Type
         GL.TypeChecker

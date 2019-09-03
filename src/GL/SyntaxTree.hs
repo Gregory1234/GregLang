@@ -45,14 +45,14 @@ instance Pretty GLImport where
   showPP (GLImport p) = "import" ++ showPP p
 
 data AST t = AST
-  { _astPackage :: GLPackage
+  { _astPackage :: Package
   , _astImports :: [GLImport]
   , _astFunctions :: [GLFun t]
   , _astClasses :: [GLClass t]
   } deriving stock (Functor,Foldable,Traversable)
     deriving Pretty via (PrettyTree (AST t))
 
-newtype GLImport = GLImport { _importPackage :: GLPackage }
+newtype GLImport = GLImport { _importPackage :: Package }
 
 data GLClass t = GLClass
   { _className :: ClassName
@@ -77,7 +77,6 @@ data GLFun t = GLFun
     deriving Pretty via (PrettyTree (GLFun t))
 
 makeLenses ''AST
-makeLenses ''GLPackage
 makeLenses ''GLImport
 makeLenses ''GLClass
 makeLenses ''GLField
