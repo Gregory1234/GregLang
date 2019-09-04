@@ -198,3 +198,8 @@ fairAppend :: [a] -> [a] -> [a]
 fairAppend (x : xs) (y : ys) = x : y : fairAppend xs ys
 fairAppend []       y        = y
 fairAppend x        []       = x
+
+lookupInv :: Eq b => b -> [(a, b)] -> Maybe a
+lookupInv _ [] = Nothing
+lookupInv c ((a, b) : xs) | b == c    = Just a
+                          | otherwise = lookupInv c xs
