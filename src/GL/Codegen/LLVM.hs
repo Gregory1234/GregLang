@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLists #-}
 
 module GL.Codegen.LLVM
   ( codegen
@@ -16,6 +16,8 @@ import           GL.Type
 import           GL.Utils
 import           Data.String
 import           Control.Monad.State
+import           Control.Monad.Reader
+import           GL.Context
 
 codegen :: FilePath -> AST GLType -> String
 codegen fp ast@(AST pn _ _ _) =
@@ -35,15 +37,21 @@ codegenClass _ = return ()
 
 codegenFun :: Maybe ClassName -> GLFun GLType -> B.ModuleBuilder ()
 codegenFun Nothing (GLFun t (Ident n) a s) =
-  B.function (L.mkName n)
-             (bimap typeToLLVM (fromString . showPP) <$> a)
-             (typeToLLVM t)
-             (evalStateT (traverse_ codegenStat s) . flip zip (map snd a))
+  B.function
+      (L.mkName n)
+      (bimap fromType (fromString . showPP) <$> a)
+      (fromType t)
+      (\b ->
+        fromRight
+          <$> runContextT
+                (ctxRaiseAdd (zip b (map snd a)) (traverse_ codegenStat s))
+                []
+      )
     $> ()
 
 codegenExpr
   :: GLExpr GLType
-  -> StateT [(L.Operand, Ident)] (B.IRBuilderT B.ModuleBuilder) L.Operand
+  -> ContextT' L.Operand (B.IRBuilderT B.ModuleBuilder) L.Operand
 codegenExpr (GLExpr "gl.Int" (EIntLit i)) =
   return $ L.ConstantOperand $ C.Int 64 i
 codegenExpr (GLExpr _ (EParen e)) = codegenExpr e
@@ -57,16 +65,20 @@ codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "/" e2@(GLExpr "gl.Int"
   = B.sdiv <$> codegenExpr e1 =<<* codegenExpr e2
 codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "%" e2@(GLExpr "gl.Int" _)))
   = B.srem <$> codegenExpr e1 =<<* codegenExpr e2
-codegenExpr (GLExpr t (EVar Nothing n [])) = gets (fromJust . lookupInv n)
+codegenExpr (GLExpr t (EVar Nothing n [])) =
+  runReaderT (single (ctxGetVars n)) ([], Nothing)
 
 codegenStat
-  :: GLStat GLType
-  -> StateT [(L.Operand, Ident)] (B.IRBuilderT B.ModuleBuilder) ()
+  :: GLStat GLType -> ContextT' L.Operand (B.IRBuilderT B.ModuleBuilder) ()
 codegenStat (SLet _ n e) = do
   i <- codegenExpr e
-  modify ((i, n) :)
+  ctxAdd i n
+codegenStat (SSet n "=" e) = do
+  i <- codegenExpr e
+  ctxModify i n
 codegenStat (SReturn e) = B.ret =<< codegenExpr e
 
-typeToLLVM :: GLType -> L.Type
-typeToLLVM "gl.Void" = L.VoidType
-typeToLLVM "gl.Int"  = L.IntegerType 64
+instance IsType L.Type where
+  showType s x = x ++ " : " ++ T.unpack (L.ppll s)
+  fromType "gl.Void" = L.VoidType
+  fromType "gl.Int"  = L.IntegerType 64

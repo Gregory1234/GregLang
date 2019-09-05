@@ -17,6 +17,7 @@ import           GHC.Exts                       ( IsList(..) )
 
 class IsType t where
   showType :: t -> String -> String
+  fromType :: GLType -> t
 
 showTypeTree :: IsType t => t -> Tree String -> Tree String
 showTypeTree t (Node a b) = Node (showType t a) b
@@ -26,18 +27,13 @@ showTypeP t = showType t . showPP
 
 instance IsType () where
   showType () = id
+  fromType _ = ()
 
 instance IsType String where
   showType s x = x ++ " : " ++ s
+  fromType = showPP
 
 deriving via String instance IsType ClassName
-
-instance IsType Integer where
-  showType n x = x ++ " : <" ++ show n ++ ">"
-
-instance (IsType a) => IsType (Maybe a) where
-  showType (Just a) = showType a
-  showType Nothing  = id
 
 newtype Package = Package { packagePath :: [String] }
   deriving newtype (Eq, Show)
@@ -60,6 +56,7 @@ instance Pretty GLType where
 instance IsType GLType where
   showType (GLType [] c) = showType (showPP c)
   showType (GLType p  c) = showType (showPP p ++ '.' : showPP c)
+  fromType = id
 
 instance IsString GLType where
   fromString x = helper (splitOn "." x)
@@ -78,9 +75,10 @@ instance IsString IType where
   fromString = ConIType . fromString
 
 instance IsType IType where
-  showType (NumIType  n) = showType n
+  showType (NumIType  n) = showType ("<" ++ show n ++ ">")
   showType (PartIType t) = showType t
   showType (ConIType  t) = showType t
+  fromType = ConIType
 
 instance Pretty IType where
   showPP (NumIType  n) = showPP n

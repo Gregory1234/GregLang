@@ -9,7 +9,7 @@ import           GL.Type
 import           GL.SyntaxTree
 import           GL.Ident
 import           GL.Utils
-import           GL.TypeChecker.Context
+import           GL.Context
 import           GL.TypeChecker.Solver
 import           Control.Monad.Reader
 import           Control.Monad.Writer
@@ -36,7 +36,11 @@ typeCheckAST (AST pn _ funs cs) =
 typeCheckStat :: IType -> GLStat IType -> RContext TypeConstraint
 typeCheckStat _ (SLet t i e) =
   typeCheckExpr e <&&&> typeEq' t (_exprType e) <* ctxAdd t i
+typeCheckStat _ (SSet i "=" e) =
+  typeCheckExpr e <&&&> (typeEq' (_exprType e) =<< single (ctxGetVars i))
 typeCheckStat t (SReturn e) = typeCheckExpr e <&&&> typeEq' t (_exprType e)
+typeCheckStat _ SNoOp       = return []
+
 
 typeCheckExpr :: GLExpr IType -> RContext TypeConstraint
 typeCheckExpr (GLExpr t (EIntLit _)) = typeEq' t "gl.Int"

@@ -12,6 +12,7 @@ library
     exposed-modules:
         GL.Args
         GL.Codegen.LLVM
+        GL.Context
         GL.Ident
         GL.Lexer
         GL.Parser
@@ -21,7 +22,6 @@ library
         GL.Token
         GL.Type
         GL.TypeChecker
-        GL.TypeChecker.Context
         GL.TypeChecker.Solver
         GL.Utils
     hs-source-dirs: src

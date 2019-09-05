@@ -203,3 +203,7 @@ lookupInv :: Eq b => b -> [(a, b)] -> Maybe a
 lookupInv _ [] = Nothing
 lookupInv c ((a, b) : xs) | b == c    = Just a
                           | otherwise = lookupInv c xs
+
+fromRight :: Either a b -> b
+fromRight (Right b) = b
+fromRight (Left  a) = error "GL.Utils.fromRight: left given"

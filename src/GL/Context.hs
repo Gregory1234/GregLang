@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, OverloadedLists #-}
 
-module GL.TypeChecker.Context
-  ( module GL.TypeChecker.Context
+module GL.Context
+  ( module GL.Context
   )
 where
 
@@ -12,18 +12,20 @@ import           Control.Monad.State
 import           Control.Monad.Reader
 import           Control.Monad.Except
 import           GL.Type
+import           Data.String
 
-type Ctx = [[CtxElement]]
+type Ctx = [[CtxElement IType]]
+type Ctx' t = [[CtxElement t]]
 
-data CtxElement =
-    CtxFun Package IType Ident [IType]
-  | CtxField GLType IType Ident
-  | CtxMethod GLType IType Ident [IType]
-  | CtxLocal IType Ident
+data CtxElement t =
+    CtxFun Package t Ident [t]
+  | CtxField GLType t Ident
+  | CtxMethod GLType t Ident [t]
+  | CtxLocal t Ident
   | CtxType GLType
     deriving (Show)
 
-instance Pretty CtxElement where
+instance Pretty t => Pretty (CtxElement t) where
   showPP (CtxFun p t n a) =
     "fun "
       ++ showPP n
@@ -65,9 +67,9 @@ ctxGetMethods c i = gets (mapMaybe helper . concat)
   helper _ = Nothing
 
 ctxGetVars
-  :: (MonadReader (Package, Maybe ClassName) m, MonadState Ctx m)
+  :: (MonadReader (Package, Maybe ClassName) m, MonadState (Ctx' t) m)
   => Ident
-  -> m [IType]
+  -> m [t]
 ctxGetVars i = ask >>= \(p, c) -> gets (mapMaybe (helper p c) . concat)
  where
   helper _ _ (CtxFun _ ft fi []) | i == fi = Just ft
@@ -89,30 +91,42 @@ ctxGetClasses c = gets (mapMaybe helper . concat)
   helper (CtxType (GLType tp tc)) | c == tc = Just tp
   helper _ = Nothing
 
-ctxAdd :: MonadState Ctx m => IType -> Ident -> m ()
+ctxAdd :: MonadState (Ctx' t) m => t -> Ident -> m ()
 ctxAdd t i = modify (\(x : xs) -> (CtxLocal t i : x) : xs)
 
-ctxRaise :: MonadState Ctx m => m a -> m a
+ctxModify :: MonadState (Ctx' t) m => t -> Ident -> m ()
+ctxModify t i = modify helper1
+ where
+  helper1 []       = []
+  helper1 (x : xs) = maybe (x : helper1 xs) (: xs) (helper2 x)
+  helper2 [] = Nothing
+  helper2 (CtxLocal a b : xs) | i == b =
+    Just $ CtxLocal t i : fromMaybe xs (helper2 xs)
+  helper2 (x : xs) = (x :) <$> helper2 xs
+
+ctxRaise :: MonadState (Ctx' t) m => m a -> m a
 ctxRaise m = modify ([] :) *> m <* modify tail
 
-ctxRaiseAdd :: MonadState Ctx m => [(IType, Ident)] -> m a -> m a
+ctxRaiseAdd :: MonadState (Ctx' t) m => [(t, Ident)] -> m a -> m a
 ctxRaiseAdd xs m = modify (map (uncurry CtxLocal) xs :) *> m <* modify tail
 
-preludeContext :: Ctx
+preludeContext :: IsType t => Ctx' t
 preludeContext =
   [ [ CtxType "gl.Int"
-    , op ["gl"] "gl.Int" "+"
-    , op ["gl"] "gl.Int" "-"
-    , op ["gl"] "gl.Int" "*"
-    , op ["gl"] "gl.Int" "/"
-    , op ["gl"] "gl.Int" "%"
+    , op ["gl"] int "+"
+    , op ["gl"] int "-"
+    , op ["gl"] int "*"
+    , op ["gl"] int "/"
+    , op ["gl"] int "%"
     ]
   ]
-  where op p t n = CtxFun p t n [t, t]
+ where
+  op p t n = CtxFun p t n [t, t]
+  int = fromType "gl.Int"
 
-globalContext :: AST IType -> Ctx
-globalContext (AST pn _ f cs) =
-  (helperFun Nothing <$> f) : (helperClass <$> cs) ++ preludeContext
+globalContext' :: Ctx' t -> AST t -> Ctx' t
+globalContext' pre (AST pn _ f cs) =
+  (helperFun Nothing <$> f) : (helperClass <$> cs) ++ pre
  where
   helperClass (GLClass cn fs ms) =
     CtxType (GLType pn cn)
@@ -123,14 +137,19 @@ globalContext (AST pn _ f cs) =
   helperFun (Just cn) (GLFun t n a _) =
     CtxMethod (GLType pn cn) t n (fst <$> a)
 
+globalContext :: IsType t => AST t -> Ctx' t
+globalContext = globalContext' preludeContext
+
 single :: (MonadError String m) => m [t] -> m t
 single m = liftEither =<< (onlyEither "A search failed" <$> m)
 
+type ContextT' t m = StateT (Ctx' t) (ExceptT String m)
 type ContextT m = StateT Ctx (ExceptT String m)
+type Context' t = ContextT' t Identity
 type Context = ContextT Identity
 
 runContextT m c = runExceptT $ evalStateT m c
 runContext m c = runExcept $ evalStateT m c
 
-ctxFromState :: State Ctx a -> Context a
+ctxFromState :: State (Ctx' t) a -> Context' t a
 ctxFromState f = StateT $ return . runState f

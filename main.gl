@@ -1,6 +1,7 @@
 package main
 
 main(a,b,c){
-  let x = c*b
+  let x = b
+  x = c
   return (x+a);
 }
