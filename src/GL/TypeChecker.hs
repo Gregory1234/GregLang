@@ -9,7 +9,7 @@ import           GL.Type
 import           GL.SyntaxTree
 import           GL.Ident
 import           GL.Utils
-import           GL.Context
+import           GL.TypeChecker.Context
 import           GL.TypeChecker.Solver
 import           Control.Monad.Reader
 import           Control.Monad.Writer
@@ -40,6 +40,8 @@ typeCheckStat _ (SSet i "=" e) =
   typeCheckExpr e <&&&> (typeEq' (_exprType e) =<< single (ctxGetVars i))
 typeCheckStat t (SReturn e) = typeCheckExpr e <&&&> typeEq' t (_exprType e)
 typeCheckStat _ SNoOp       = return []
+typeCheckStat t (SBraces l) = ctxRaise $ typeAll' (fmap (typeCheckStat t) l)
+typeCheckStat _ (SExpr   e) = typeCheckExpr e
 
 
 typeCheckExpr :: GLExpr IType -> RContext TypeConstraint
@@ -54,7 +56,14 @@ typeCheckExpr (GLExpr t (EOp e1 op e2)) = typeAll'
   , typeAny
   .   fmap (zipTypeEq [t, _exprType e1, _exprType e2] . uncurry (:))
   .   filter ((== 2) . length . snd)
-  <$> ctxGetFuns (Ident $ showPP op)
+  <$> ctxGetFuns (Ident $ "bin" ++ showPP op)
+  ]
+typeCheckExpr (GLExpr t (EPrefix op e)) = typeAll'
+  [ typeCheckExpr e
+  , typeAny
+  .   fmap (zipTypeEq [t, _exprType e] . uncurry (:))
+  .   filter ((== 1) . length . snd)
+  <$> ctxGetFuns (Ident $ "pre" ++ showPP op)
   ]
 
 typeCheck :: AST IType -> Either String (AST GLType)

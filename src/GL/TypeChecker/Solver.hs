@@ -5,7 +5,7 @@ module GL.TypeChecker.Solver
   )
 where
 
-import           GL.Context
+import           GL.TypeChecker.Context
 import           GL.Utils
 import           GL.SyntaxTree
 import           GL.Type

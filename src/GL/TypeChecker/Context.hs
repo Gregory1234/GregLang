@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, OverloadedLists #-}
 
-module GL.Context
-  ( module GL.Context
+module GL.TypeChecker.Context
+  ( module GL.TypeChecker.Context
   )
 where
 
@@ -12,7 +12,6 @@ import           Control.Monad.State
 import           Control.Monad.Reader
 import           Control.Monad.Except
 import           GL.Type
-import           Data.String
 
 type Ctx = [[CtxElement IType]]
 type Ctx' t = [[CtxElement t]]
@@ -113,15 +112,17 @@ ctxRaiseAdd xs m = modify (map (uncurry CtxLocal) xs :) *> m <* modify tail
 preludeContext :: IsType t => Ctx' t
 preludeContext =
   [ [ CtxType "gl.Int"
-    , op ["gl"] int "+"
-    , op ["gl"] int "-"
-    , op ["gl"] int "*"
-    , op ["gl"] int "/"
-    , op ["gl"] int "%"
+    , op2 ["gl"] int "+"
+    , op2 ["gl"] int "-"
+    , op2 ["gl"] int "*"
+    , op2 ["gl"] int "/"
+    , op2 ["gl"] int "%"
+    , op1 ["gl"] int "-"
     ]
   ]
  where
-  op p t n = CtxFun p t n [t, t]
+  op2 p t n = CtxFun p t (Ident $ "bin" ++ n) [t, t]
+  op1 p t n = CtxFun p t (Ident $ "pre" ++ n) [t]
   int = fromType "gl.Int"
 
 globalContext' :: Ctx' t -> AST t -> Ctx' t

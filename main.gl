@@ -1,7 +1,9 @@
 package main
 
-main(a,b,c){
-  let x = b
-  x = c
-  return (x+a);
+Int main(a,b){
+  let x = a
+  {
+    x = b
+  }
+  return x;
 }

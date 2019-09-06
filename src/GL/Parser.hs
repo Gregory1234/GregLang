@@ -37,9 +37,6 @@ exactT t = P.label (showPP t) $ void $ P.satisfy ((== t) . _tokenVal)
 bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b
 
-braces :: Parser a -> Parser a
-braces = bracketAny (kw "{") (kw "}")
-
 parens :: Parser a -> Parser a
 parens = bracketAny (kw "(") (kw ")")
 
@@ -101,12 +98,16 @@ instance Parsable (GLField IType) where
       <$> safeArg
       <*> (optional (preKw "=" parser) <* optional (kw ";"))
 
+safeBraces :: Parser [GLStat IType]
+safeBraces = preKw "{" helper
+  where helper = (kw "}" $> []) <|> ((:) <$> parser <*> helper)
+
 instance Parsable (GLFun IType) where
   parser =
     uncurry GLFun
       <$> safeArg
       <*> optionL (parens $ maybeCommas safeArg)
-      <*> braces (P.many parser)
+      <*> safeBraces
 
 instance Parsable (GLStat IType) where
   parser = P.choice
@@ -129,7 +130,7 @@ instance Parsable (GLStat IType) where
     , sc $ kw "break" $> SBreak
     , sc $ kw "continue" $> SContinue
     , kw ";" $> SNoOp
-    , SBraces <$> braces (P.many parser)
+    , SBraces <$> safeBraces
     , sc $ SExpr <$> parser
     ]
    where

@@ -199,11 +199,11 @@ fairAppend (x : xs) (y : ys) = x : y : fairAppend xs ys
 fairAppend []       y        = y
 fairAppend x        []       = x
 
-lookupInv :: Eq b => b -> [(a, b)] -> Maybe a
-lookupInv _ [] = Nothing
-lookupInv c ((a, b) : xs) | b == c    = Just a
-                          | otherwise = lookupInv c xs
-
 fromRight :: Either a b -> b
 fromRight (Right b) = b
-fromRight (Left  a) = error "GL.Utils.fromRight: left given"
+fromRight (Left  _) = error "GL.Utils.fromRight: Left"
+
+replaceOn :: (a -> Bool) -> a -> [a] -> Maybe [a]
+replaceOn _ _ [] = Nothing
+replaceOn f a (x : xs) | f x       = Just $ a : fromMaybe xs (replaceOn f a xs)
+                       | otherwise = (x :) <$> replaceOn f a xs
