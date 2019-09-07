@@ -1,0 +1,63 @@
+name:                GregLang
+version:             0.1.0.0
+github:              "Gregory1234/GregLang"
+license:             GPL-3.0-only
+author:              "Gregory1234"
+maintainer:          "Gregory1234@users.noreply.github.com"
+copyright:           "2019 Gregory1234"
+
+extra-source-files:
+- README.md
+
+description:         Please see the README on GitHub at <https://github.com/Gregory1234/GregLang#readme>
+
+dependencies:
+  - base >= 4.12 && < 5
+  - parseargs
+  - megaparsec
+  - containers
+  - utility-ht
+  - split
+  - transformers
+  - lens
+  - mtl
+  - llvm-hs-pure
+  - llvm-hs-pretty >=0.6.2.0
+  - text
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -Wredundant-constraints
+    - -Widentities
+    - -Wmissing-export-lists
+    - -Wall
+    - -O2
+
+executables:
+  GregLangCompiler:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O2
+    dependencies:
+      - GregLang
+
+tests:
+  GregLang-test:
+    main:                MainTest.hs
+    source-dirs:         test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O2
+    dependencies:
+      - GregLang
+      - tasty
+      - tasty-quickcheck
+      - QuickCheck
+      - megaparsec
