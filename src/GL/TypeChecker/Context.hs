@@ -112,18 +112,32 @@ ctxRaiseAdd xs m = modify (map (uncurry CtxLocal) xs :) *> m <* modify tail
 preludeContext :: IsType t => Ctx' t
 preludeContext =
   [ [ CtxType "gl.Int"
+    , CtxType "gl.Float"
+    , CtxType "gl.String"
+    , CtxType "gl.Void"
     , op2 ["gl"] int "+"
     , op2 ["gl"] int "-"
     , op2 ["gl"] int "*"
     , op2 ["gl"] int "/"
     , op2 ["gl"] int "%"
     , op1 ["gl"] int "-"
+    , op2 ["gl"] float "+"
+    , op2 ["gl"] float "-"
+    , op2 ["gl"] float "*"
+    , op2 ["gl"] float "/"
+    , op2 ["gl"] float "%"
+    , op1 ["gl"] float "-"
+    , op2 ["gl"] string "+"
+    , CtxFun ["gl"] void "println" [string]
     ]
   ]
  where
   op2 p t n = CtxFun p t (Ident $ "bin" ++ n) [t, t]
   op1 p t n = CtxFun p t (Ident $ "pre" ++ n) [t]
-  int = fromType "gl.Int"
+  int    = fromType "gl.Int"
+  float  = fromType "gl.Float"
+  string = fromType "gl.String"
+  void   = fromType "gl.Void"
 
 globalContext' :: Ctx' t -> AST t -> Ctx' t
 globalContext' pre (AST pn _ f cs) =

@@ -45,11 +45,22 @@ typeCheckStat _ (SExpr   e) = typeCheckExpr e
 
 
 typeCheckExpr :: GLExpr IType -> RContext TypeConstraint
-typeCheckExpr (GLExpr t (EIntLit _)) = typeEq' t "gl.Int"
+typeCheckExpr (GLExpr t (EIntLit    _)) = typeEq' t "gl.Int"
+typeCheckExpr (GLExpr t (EFloatLit  _)) = typeEq' t "gl.Float"
+typeCheckExpr (GLExpr t (ECharLit   _)) = typeEq' t "gl.Char"
+typeCheckExpr (GLExpr t (EStringLit _)) = typeEq' t "gl.String"
 typeCheckExpr (GLExpr t (EParen e)) =
   typeCheckExpr e <&&&> typeEq' t (_exprType e)
 typeCheckExpr (GLExpr t (EVar Nothing n [])) =
   typeEq t <$> single (ctxGetVars n)
+typeCheckExpr (GLExpr t (EVar Nothing n as)) = typeAll'
+  ( (   typeAny
+    .   fmap (zipTypeEq (t : map _exprType as) . uncurry (:))
+    .   filter ((== length as) . length . snd)
+    <$> ctxGetFuns n
+    )
+  : map typeCheckExpr as
+  )
 typeCheckExpr (GLExpr t (EOp e1 op e2)) = typeAll'
   [ typeCheckExpr e1
   , typeCheckExpr e2

@@ -2,13 +2,13 @@
 .PHONY : all test repl clear
 
 all:
-	stack run -- main.gl
+	stack run -j1 -- main.gl
 
 test:
-	stack test
+	stack test -j1
 
 repl:
-	stack repl
+	stack repl -j1
 
 clear :
 	-rm -r dist
