@@ -70,6 +70,7 @@ data GLExprU e =
   | EOp e ExprOp e
   | EPrefix ExprPrefixOp e
   | EVar (Maybe e) Ident [e]
+  | EIf e e e
   | EParen e
   deriving stock (Foldable,Traversable,Functor)
   deriving Pretty via (PrettyTree (GLExprU e))
@@ -86,6 +87,8 @@ instance Treeable e => Treeable (GLExprU e) where
   toTree (EVar Nothing  n xs) = Node (showPP n) [listToTree "args" xs]
   toTree (EVar (Just d) n xs) =
     Node (showPP n) [Node "of" [toTree d], listToTree "args" xs]
+  toTree (EIf e1 e2 e3) =
+    Node "if" [toTree e1, Node "then" [toTree e2], Node "else" [toTree e3]]
   toTree (EParen e) = Node "parens" [toTree e]
 
 makeLenses ''GLExpr

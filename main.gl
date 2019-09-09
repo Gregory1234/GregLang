@@ -1,5 +1,5 @@
 package main
 
 Void main(){
-  println("hello world")
+  println(1?2:3)
 }

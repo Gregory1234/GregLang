@@ -152,9 +152,8 @@ exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
 exprLevel op e = do
   e1 <- e
   es <- P.many (bo <&> e)
-  foldM helper e1 es
+  foldM (\a (b, c) -> incType $ EOp a b c) e1 es
  where
-  helper a (b, c) = incType $ EOp a b c
   bo =
     P.label "<binary operator>" (satisfyT (^? _TKeyword . folding (lexElem op)))
 
@@ -167,20 +166,27 @@ exprPrefix e = (incType =<< (EPrefix <$> po <*> e)) <|> e
   po =
     P.label "<prefix operator>" (satisfyT (^? _TKeyword . to showPP . _Pretty))
 
+exprIfParser :: Parser (GLExpr IType) -> Parser (GLExpr IType)
+exprIfParser e = do
+  e1 <- e
+  es <- P.many (preKw "?" (exprIfParser e) <&> preKw ":" (exprIfParser e))
+  foldM (\a (b, c) -> incType $ EIf a b c) e1 es
+
 exprExtParser :: Parser (GLExpr IType)
 exprExtParser =
-  exprLevels
-      [ ["||"]
-      , ["^^"]
-      , ["&&"]
-      , ["|"]
-      , ["^"]
-      , ["&"]
-      , ["==", "!="]
-      , ["<", ">", "<=", ">="]
-      , ["+", "-"]
-      , ["*", "/", "%"]
-      ]
+  exprIfParser
+    $ exprLevels
+        [ ["||"]
+        , ["^^"]
+        , ["&&"]
+        , ["|"]
+        , ["^"]
+        , ["&"]
+        , ["==", "!="]
+        , ["<", ">", "<=", ">="]
+        , ["+", "-"]
+        , ["*", "/", "%"]
+        ]
     $ exprPrefix exprBaseParser
 
 exprUBaseParser :: Parser (GLExprU (GLExpr IType))
