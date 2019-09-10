@@ -11,5 +11,5 @@ repl:
 	stack repl -j1
 
 clear :
-	-rm -r dist
-	rm -r dist-newstyle
+	rm -r .stack-work
+	rm GregLang.cabal

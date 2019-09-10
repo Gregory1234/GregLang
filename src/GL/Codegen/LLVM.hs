@@ -45,8 +45,8 @@ codegenFun :: Package -> Maybe ClassName -> GLFun GLType -> B.ModuleBuilder ()
 codegenFun p Nothing (GLFun t (Ident n) a s) =
   B.function
       (L.mkName n)
-      (bimap fromType (fromString . showPP) <$> a)
-      (fromType t)
+      (bimap typeToLLVM (fromString . showPP) <$> a)
+      (typeToLLVM t)
       ( evalStateT (runReaderT (traverse_ codegenStat s) (p, Nothing))
       . pure
       . zip (map snd a)
@@ -69,7 +69,7 @@ codegenExpr (GLExpr "gl.Int" (EOp e1@(GLExpr "gl.Int" _) "%" e2@(GLExpr "gl.Int"
   = B.srem <$> codegenExpr e1 =<<* codegenExpr e2
 codegenExpr (GLExpr "gl.Int" (EPrefix "-" e@(GLExpr "gl.Int" _))) =
   B.sub (L.ConstantOperand $ C.Int 64 0) =<< codegenExpr e
-codegenExpr (GLExpr t (EVar Nothing n [])) =
+codegenExpr (GLExpr _ (EVar Nothing n [])) =
   gets (fromJust . getFirst . foldMap (First . lookup n))
 
 codegenCtxRaise :: MonadState [[a]] m => m b -> m b
@@ -81,7 +81,7 @@ codegenStat (SLet _ n e) = do
   ix 0 %= ((n, i) :)
 codegenStat (SSet n "=" e) = modify . helper =<< codegenExpr e
  where
-  helper i [] = []
+  helper _ [] = []
   helper i (x : xs) =
     maybe (x : helper i xs) (: xs) $ replaceOn ((== n) . fst) (n, i) x
 codegenStat (SReturn e) = B.ret =<< codegenExpr e
@@ -89,7 +89,6 @@ codegenStat SNoOp       = pure ()
 codegenStat (SBraces l) = codegenCtxRaise $ traverse_ codegenStat l
 codegenStat (SExpr   e) = codegenExpr e $> ()
 
-instance IsType L.Type where
-  showType s x = x ++ " : " ++ T.unpack (L.ppll s)
-  fromType "gl.Void" = L.VoidType
-  fromType "gl.Int"  = L.IntegerType 64
+typeToLLVM :: GLType -> L.Type
+typeToLLVM "gl.Void" = L.VoidType
+typeToLLVM "gl.Int"  = L.IntegerType 64

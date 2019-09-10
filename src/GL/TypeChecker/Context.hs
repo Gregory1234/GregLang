@@ -7,10 +7,10 @@ where
 
 import           GL.SyntaxTree
 import           GL.Ident
-import           GL.Utils
-import           Control.Monad.State
-import           Control.Monad.Reader
-import           Control.Monad.Except
+import           GL.Utils                hiding ( void )
+import           Control.Monad.State     hiding ( void )
+import           Control.Monad.Reader    hiding ( void )
+import           Control.Monad.Except    hiding ( void )
 import           GL.Type
 
 type Ctx = [[CtxElement IType]]
@@ -36,7 +36,7 @@ instance Pretty t => Pretty (CtxElement t) where
       ++ showPP p
   showPP (CtxField c t n) =
     "field " ++ showPP n ++ " : " ++ showPP t ++ " in " ++ showPP c
-  showPP (CtxFun c t n a) =
+  showPP (CtxMethod c t n a) =
     "method "
       ++ showPP n
       ++ " : "
@@ -99,7 +99,7 @@ ctxModify t i = modify helper1
   helper1 []       = []
   helper1 (x : xs) = maybe (x : helper1 xs) (: xs) (helper2 x)
   helper2 [] = Nothing
-  helper2 (CtxLocal a b : xs) | i == b =
+  helper2 (CtxLocal _ b : xs) | i == b =
     Just $ CtxLocal t i : fromMaybe xs (helper2 xs)
   helper2 (x : xs) = (x :) <$> helper2 xs
 
@@ -163,7 +163,9 @@ type ContextT m = StateT Ctx (ExceptT String m)
 type Context' t = ContextT' t Identity
 type Context = ContextT Identity
 
+runContextT :: Monad m => StateT s (ExceptT e m) a -> s -> m (Either e a)
 runContextT m c = runExceptT $ evalStateT m c
+runContext :: StateT s (Except e) a -> s -> Either e a
 runContext m c = runExcept $ evalStateT m c
 
 ctxFromState :: State (Ctx' t) a -> Context' t a

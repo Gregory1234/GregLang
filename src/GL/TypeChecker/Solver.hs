@@ -11,9 +11,7 @@ import           GL.SyntaxTree
 import           GL.Type
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Control.Monad.Writer
 import           Control.Monad.Except
-import           Data.List
 import           Control.Lens            hiding ( Context )
 
 type TypeConstraint = [[(IType, IType)]]
@@ -59,9 +57,9 @@ tryType (PartIType t) = GLType <$> single (ctxGetClasses t) <*> pure t
 tryType (ConIType  t) = return t
 
 solveConstr :: AST IType -> TypeConstraint -> Context (AST GLType)
-solveConstr a t = traverse (joinFun $ helper <$> solver t) a
+solveConstr ast c = traverse (joinFun $ helper <$> solver c) ast
  where
-  size = fromIntegral (lengthOf (traverse . _NumIType) a) - 1
+  size = fromIntegral (lengthOf (traverse . _NumIType) ast) - 1
   helper _ (ConIType  t) = return t
   helper _ (PartIType t) = tryType $ PartIType t
   helper l (NumIType  n) = tryType $ l !! fromIntegral n
@@ -75,13 +73,14 @@ solveConstr a t = traverse (joinFun $ helper <$> solver t) a
       . (traverse . traverse . uncurry $ (===))
 
 (===) :: IType -> IType -> Context ([(IType, IType)] -> [[(IType, IType)]])
-(===) a b = gets $ \ctx -> maybeToAlt . unify ctx a b
+(===) x y = gets $ \ctx -> maybeToAlt . unify ctx x y
   where unify ctx a b r = (++ r) <$> matchIType ctx (subst r a) (subst r b)
 
 subst :: [(IType, IType)] -> IType -> IType
 subst s x@(NumIType _) = maybe x (subst s) (lookup x s)
 subst _ x              = x
 
+matchIType :: Ctx -> IType -> IType -> Maybe [(IType, IType)]
 matchIType _ (ConIType a) (ConIType b) | a == b = return []
 matchIType ctx (PartIType a) (ConIType (GLType b c))
   | a == c, runContext (single (ctxGetClasses a)) ctx == Right b = return []
