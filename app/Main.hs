@@ -22,5 +22,9 @@ main = do
         (Right ast') ->
           pprint ast'
             *> let out = codegen inputFileArg ast'
-               in  putStrLn out *> writeFile outputFileArg out
+               in
+                 putStrLn out
+                   *> writeFile
+                        (fromMaybe (inputFileArg ++ ".ll") outputFileArg)
+                        out
   return ()

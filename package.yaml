@@ -13,7 +13,7 @@ description:         Please see the README on GitHub at <https://github.com/Greg
 
 dependencies:
   - base >= 4.12 && < 5
-  - parseargs
+  - optparse-applicative
   - megaparsec
   - containers
   - utility-ht

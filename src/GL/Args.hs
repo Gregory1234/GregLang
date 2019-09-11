@@ -3,33 +3,26 @@ module GL.Args
   )
 where
 
-import           Data.Maybe
-import qualified System.Console.ParseArgs      as A
+import           Options.Applicative
 
 data Args =
   Args
     { inputFileArg :: FilePath
-    , outputFileArg :: FilePath
+    , outputFileArg :: Maybe FilePath
     }
   deriving (Show)
 
-schema :: [A.Arg String]
-schema =
-  [ A.Arg "out"
-          (Just 'o')
-          (Just "output")
-          (A.argDataOptional "output" A.ArgtypeString)
-          "Output file"
-  , A.Arg "in"
-          Nothing
-          Nothing
-          (A.argDataRequired "input" A.ArgtypeString)
-          "Input file"
-  ]
+argsParser :: Parser Args
+argsParser =
+  Args <$> strArgument (metavar "INPUT" <> help "Input file path") <*> optional
+    (strOption
+      (metavar "OUTPUT" <> long "output" <> short 'o' <> help "Output file path"
+      )
+    )
 
 getArgs :: IO Args
-getArgs = do
-  a <- A.parseArgsIO A.ArgsComplete schema
-  return $ Args
-    (A.getRequiredArg a "in")
-    (fromMaybe (A.getRequiredArg a "in" ++ ".ll") (A.getArg a "out"))
+getArgs = execParser $ info
+  (argsParser <**> helper)
+  (fullDesc <> progDesc "Compile a GregLang program" <> header
+    "GregLangCompiler - GregLang compiler"
+  )
