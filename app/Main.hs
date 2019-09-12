@@ -6,7 +6,7 @@ import           GL.Args
 import           GL.Lexer
 import           GL.Parser
 import           GL.TypeChecker
-import           GL.Codegen.LLVM
+import           GL.Codegen.Eval
 import           GL.Utils
 
 main :: IO ()
@@ -18,13 +18,6 @@ main = do
     (Right tok) -> pprint tok *> case parseGregLang inputFileArg tok of
       (Left  err) -> putStrLn err
       (Right ast) -> pprint ast *> case typeCheck ast of
-        (Left err) -> putStrLn err
-        (Right ast') ->
-          pprint ast'
-            *> let out = codegen inputFileArg ast'
-               in
-                 putStrLn out
-                   *> writeFile
-                        (fromMaybe (inputFileArg ++ ".ll") outputFileArg)
-                        out
+        (Left  err ) -> putStrLn err
+        (Right ast') -> pprint ast' *> runGregLang ast' >>= print
   return ()

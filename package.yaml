@@ -21,8 +21,6 @@ dependencies:
   - transformers
   - lens
   - mtl
-  - llvm-hs-pure
-  - llvm-hs-pretty >=0.6.2.0
   - text
 
 library:

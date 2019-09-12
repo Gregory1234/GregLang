@@ -1,5 +1,5 @@
 package main
 
-Void main(){
-  println(1?2:3)
+main{
+  return 5
 }

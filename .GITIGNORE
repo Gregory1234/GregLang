@@ -7,8 +7,6 @@ dist/
 *.prof
 *.local
 *~
-*.ll
-*.o
 *.exe
 *.cabal
 *.lock
