@@ -28,14 +28,14 @@ typeCheckAST (AST pn _ funs cs) =
   foldMapAp typeCheckFun funs <&&&> foldMapAp typeCheckClass cs
  where
   typeCheckFun :: GLFun IType -> Context TypeConstraint
-  typeCheckFun (GLFun t _ a s) = ctxRaiseAdd a
+  typeCheckFun (GLFun t _ a s) = ctxRaiseAddLocal a
     $ foldMapAp (\s' -> runReaderT (typeCheckStat t s') (pn, Nothing)) s
   typeCheckClass :: GLClass IType -> Context TypeConstraint
   typeCheckClass = undefined
 
 typeCheckStat :: IType -> GLStat IType -> RContext TypeConstraint
 typeCheckStat _ (SLet t i e) =
-  typeCheckExpr e <&&&> typeEq' t (_exprType e) <* ctxAdd t i
+  typeCheckExpr e <&&&> typeEq' t (_exprType e) <* ctxAddLocal t i
 typeCheckStat _ (SSet i "=" e) =
   typeCheckExpr e <&&&> (typeEq' (_exprType e) =<< single (ctxGetVars i))
 typeCheckStat t (SReturn e) = typeCheckExpr e <&&&> typeEq' t (_exprType e)

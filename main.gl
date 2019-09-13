@@ -1,5 +1,6 @@
 package main
 
 main{
+  println("hello world")
   return 5
 }

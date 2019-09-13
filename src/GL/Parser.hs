@@ -143,10 +143,11 @@ instance Parsable (GLExpr IType) where
   parser = P.try exprExtParser <|> exprBaseParser
 
 exprBaseParser :: Parser (GLExpr IType)
-exprBaseParser =
-  GLExpr
-    <$> ((PartIType <$> P.try (parens parser)) <|> (NumIType <$> inc))
-    <*> exprUBaseParser
+exprBaseParser = do
+  a <- optional (parens parser)
+  e <- exprUBaseParser
+  t <- maybe (NumIType <$> inc) (return . PartIType) a
+  return (GLExpr t e)
 
 exprLevel :: [ExprOp] -> Parser (GLExpr IType) -> Parser (GLExpr IType)
 exprLevel op e = do

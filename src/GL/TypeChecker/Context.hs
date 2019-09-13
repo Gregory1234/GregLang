@@ -2,6 +2,7 @@
 
 module GL.TypeChecker.Context
   ( module GL.TypeChecker.Context
+  , module GL.Context
   )
 where
 
@@ -12,6 +13,7 @@ import           Control.Monad.State     hiding ( void )
 import           Control.Monad.Reader    hiding ( void )
 import           Control.Monad.Except    hiding ( void )
 import           GL.Type
+import           GL.Context
 
 type Ctx = [[CtxElement IType]]
 type Ctx' t = [[CtxElement t]]
@@ -90,9 +92,6 @@ ctxGetClasses c = gets (mapMaybe helper . concat)
   helper (CtxType (GLType tp tc)) | c == tc = Just tp
   helper _ = Nothing
 
-ctxAdd :: MonadState (Ctx' t) m => t -> Ident -> m ()
-ctxAdd t i = modify (\(x : xs) -> (CtxLocal t i : x) : xs)
-
 ctxModify :: MonadState (Ctx' t) m => t -> Ident -> m ()
 ctxModify t i = modify helper1
  where
@@ -103,11 +102,11 @@ ctxModify t i = modify helper1
     Just $ CtxLocal t i : fromMaybe xs (helper2 xs)
   helper2 (x : xs) = (x :) <$> helper2 xs
 
-ctxRaise :: MonadState (Ctx' t) m => m a -> m a
-ctxRaise m = modify ([] :) *> m <* modify tail
+ctxAddLocal :: MonadState (Ctx' t) m => t -> Ident -> m ()
+ctxAddLocal = curry (ctxAdd . uncurry CtxLocal)
 
-ctxRaiseAdd :: MonadState (Ctx' t) m => [(t, Ident)] -> m a -> m a
-ctxRaiseAdd xs m = modify (map (uncurry CtxLocal) xs :) *> m <* modify tail
+ctxRaiseAddLocal :: MonadState (Ctx' t) m => [(t, Ident)] -> m a -> m a
+ctxRaiseAddLocal = ctxRaiseAdd . map (uncurry CtxLocal)
 
 preludeContext :: IsType t => Ctx' t
 preludeContext =
@@ -154,9 +153,6 @@ globalContext' pre (AST pn _ f cs) =
 
 globalContext :: IsType t => AST t -> Ctx' t
 globalContext = globalContext' preludeContext
-
-single :: (MonadError String m) => m [t] -> m t
-single m = liftEither =<< (onlyEither "A search failed" <$> m)
 
 type ContextT' t m = StateT (Ctx' t) (ExceptT String m)
 type ContextT m = StateT Ctx (ExceptT String m)
