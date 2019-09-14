@@ -207,3 +207,8 @@ replaceOn :: (a -> Bool) -> a -> [a] -> Maybe [a]
 replaceOn _ _ [] = Nothing
 replaceOn f a (x : xs) | f x       = Just $ a : fromMaybe xs (replaceOn f a xs)
                        | otherwise = (x :) <$> replaceOn f a xs
+
+only :: [a] -> a
+only [x] = x
+only []  = error "GL.Utils.only: []"
+only _   = error "GL.Utils.only: too big"

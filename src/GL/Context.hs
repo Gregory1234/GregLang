@@ -6,7 +6,6 @@ module GL.Context
 where
 
 import           Control.Monad.State
-import           Control.Monad.Reader
 import           Control.Monad.Except
 import           GL.Utils
 
@@ -21,3 +20,6 @@ ctxRaiseAdd xs m = modify (xs :) *> m <* modify tail
 
 single :: (MonadError String m) => m [t] -> m t
 single m = liftEither =<< (onlyEither "A search failed" <$> m)
+
+unsafeSingle :: Monad m => m [t] -> m t
+unsafeSingle m = only <$> m
