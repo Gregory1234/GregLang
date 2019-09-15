@@ -91,11 +91,16 @@ safeArg = do
   t <- maybe (NumIType <$> inc) (return . PartIType) a
   return (t, i)
 
+instance Parsable GLVisivility where
+  parser =
+    (kw "public" $> GLPublic) <|> (kw "private" $> GLPrivate) <|> pure GLPublic
+
 instance Parsable (GLField IType) where
   parser =
     P.try
-      $   uncurry GLField
-      <$> safeArg
+      $   fmap uncurry GLField
+      <$> parser
+      <*> safeArg
       <*> (optional (preKw "=" parser) <* optional (kw ";"))
 
 safeBraces :: Parser [GLStat IType]
@@ -104,8 +109,9 @@ safeBraces = preKw "{" helper
 
 instance Parsable (GLFun IType) where
   parser =
-    uncurry GLFun
-      <$> safeArg
+    fmap uncurry GLFun
+      <$> parser
+      <*> safeArg
       <*> optionL (parens $ maybeCommas safeArg)
       <*> safeBraces
 

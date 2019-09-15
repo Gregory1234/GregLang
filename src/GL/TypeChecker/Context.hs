@@ -146,9 +146,9 @@ globalContext' pre (AST pn _ f cs) =
     CtxType (GLType pn cn)
       :  (helperField cn <$> fs)
       ++ (helperFun (Just cn) <$> ms)
-  helperField cn (GLField t n _) = CtxField (GLType pn cn) t n
-  helperFun Nothing (GLFun t n a _) = CtxFun pn t n (fst <$> a)
-  helperFun (Just cn) (GLFun t n a _) =
+  helperField cn (GLField _ t n _) = CtxField (GLType pn cn) t n
+  helperFun Nothing (GLFun _ t n a _) = CtxFun pn t n (fst <$> a)
+  helperFun (Just cn) (GLFun _ t n a _) =
     CtxMethod (GLType pn cn) t n (fst <$> a)
 
 globalContext :: IsType t => AST t -> Ctx' t

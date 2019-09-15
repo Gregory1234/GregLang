@@ -33,12 +33,13 @@ instance IsType t => Treeable (GLClass t) where
     Node ("class " ++ showPP n) (toForest f ++ toForest m)
 
 instance IsType t => Treeable (GLField t) where
-  toTree (GLField t n (Just e)) = Node (showTypeP t n ++ " =") [toTree e]
-  toTree (GLField t n Nothing ) = toTree (showTypeP t n)
+  toTree (GLField pb t n (Just e)) =
+    Node (showPP pb ++ ' ' : showTypeP t n ++ " =") [toTree e]
+  toTree (GLField pb t n Nothing) = toTree (showPP pb ++ ' ' : showTypeP t n)
 
 instance IsType t => Treeable (GLFun t) where
-  toTree (GLFun t n as s) = listToTree
-    ("fun " ++ showTypeP t n)
+  toTree (GLFun pb t n as s) = listToTree
+    (showPP pb ++ " fun " ++ showTypeP t n)
     (listToTree "args" (uncurry showTypeP <$> as) : map toTree s)
 
 instance Pretty GLImport where
@@ -61,15 +62,23 @@ data GLClass t = GLClass
   } deriving stock (Functor,Foldable,Traversable)
     deriving Pretty via (PrettyTree (GLClass t))
 
+data GLVisivility = GLPublic | GLPrivate
+
+instance Pretty GLVisivility where
+  showPP GLPublic  = "public"
+  showPP GLPrivate = "private"
+
 data GLField t = GLField
-  { _fieldType :: t
+  { _fieldVisivility :: GLVisivility
+  , _fieldType :: t
   , _fieldName :: Ident
   , _fieldDefault :: Maybe (GLExpr t)
   } deriving stock (Functor,Foldable,Traversable)
     deriving Pretty via (PrettyTree (GLField t))
 
 data GLFun t = GLFun
-  { _funType :: t
+  { _funVisivility :: GLVisivility
+  , _funType :: t
   , _funName :: Ident
   , _funArgs :: [(t, Ident)]
   , _funStats :: [GLStat t]

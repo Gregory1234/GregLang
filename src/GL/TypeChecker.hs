@@ -28,7 +28,7 @@ typeCheckAST (AST pn _ funs cs) =
   foldMapAp typeCheckFun funs <&&&> foldMapAp typeCheckClass cs
  where
   typeCheckFun :: GLFun IType -> Context TypeConstraint
-  typeCheckFun (GLFun t _ a s) = ctxRaiseAddLocal a
+  typeCheckFun (GLFun _ t _ a s) = ctxRaiseAddLocal a
     $ foldMapAp (\s' -> runReaderT (typeCheckStat t s') (pn, Nothing)) s
   typeCheckClass :: GLClass IType -> Context TypeConstraint
   typeCheckClass = undefined

@@ -52,14 +52,14 @@ ctxModify i t = modify helper1
 data GLIO n = GLPrintString String n deriving (Functor)
 
 runGregLang :: AST GLType -> IO Integer
-runGregLang (AST p _ [f@(GLFun "gl.Int" "main" [] _)] _) =
+runGregLang (AST p _ [f@(GLFun GLPublic "gl.Int" "main" [] _)] _) =
   foldFree helper
     $   getInt
     <$> evalStateT (runReaderT (runFun f) (p, Nothing)) []
   where helper (GLPrintString s n) = putStrLn s $> n
 
 runFun :: GLFun GLType -> CodegenContext GLValue
-runFun (GLFun t n a s) = ctxRaise (runStats s)
+runFun (GLFun _ t n a s) = ctxRaise (runStats s)
 
 runStats :: [GLStat GLType] -> CodegenContext GLValue
 runStats (SExpr   e    : xs) = runExpr e *> runStats xs

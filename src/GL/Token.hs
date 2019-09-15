@@ -40,6 +40,7 @@ keywords :: [String]
 keywords = concat
   [ ["class", "package", "import", "if", "else", "while", "do"]
   , ["for", "let", "return", "import", "break", "continue"]
+  , ["public", "private"]
   , ["{", "}", "(", ")", "[", "]", ";", ".", ",", "?", ":"]
   , ["==", "<=", ">=", "!=", "+=", "-=", "*=", "/=", "%="]
   , ["&&=", "||=", "^^=", "&=", "|=", "^="]
