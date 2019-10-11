@@ -29,7 +29,7 @@ lexGregLang fn str =
 lexer :: String -> P.SourcePos -> Either String [LocToken]
 lexer "" _ = Right []
 lexer s  p = do
-  ((ds, t), nds) <- listToEither ("couldnt lex (" ++ s ++ ")") $ lexGather s
+  ((ds, t), nds) <- headError ("couldnt lex (" ++ s ++ ")") $ lexGather s
   let (as, s') = spanSpace nds
   let p'       = updatePosString p (ds ++ as)
   ts <- lexer s' p'

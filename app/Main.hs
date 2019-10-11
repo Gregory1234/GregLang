@@ -8,16 +8,17 @@ import           GL.Parser
 import           GL.TypeChecker
 import           GL.Codegen.Eval
 import           GL.Utils
+import           Control.Monad.Except
 
 main :: IO ()
 main = do
   Args {..}   <- getArgs
   fileContent <- readFile inputFileArg
-  case lexGregLang inputFileArg fileContent of
-    (Left  err) -> putStrLn err
-    (Right tok) -> pprint tok *> case parseGregLang inputFileArg tok of
-      (Left  err) -> putStrLn err
-      (Right ast) -> pprint ast *> case typeCheck ast of
-        (Left  err ) -> putStrLn err
-        (Right ast') -> pprint ast' *> runGregLang ast' >>= print
-  return ()
+  (either putStrLn pure =<<) . runExceptT $ do
+    tok <- liftEither $ lexGregLang inputFileArg fileContent
+    lift $ pprint tok
+    ast <- liftEither $ parseGregLang inputFileArg tok
+    lift $ pprint ast
+    ast' <- liftEither $ typeCheck ast
+    lift $ pprint ast
+    lift $ runGregLang ast' >>= print

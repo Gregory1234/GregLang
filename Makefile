@@ -10,6 +10,9 @@ test:
 repl:
 	stack repl -j1
 
+doc:
+	stack haddock --haddock-hyperlink-source --haddock-deps
+
 clear :
 	rm -r .stack-work
 	rm GregLang.cabal

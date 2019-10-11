@@ -67,7 +67,7 @@ solveConstr ast c = traverse (joinFun $ helper <$> solver c) ast
     single
       . fmap
           (map (\a -> subst a . NumIType <$> [0 .. size]) . ($ []) . foldr
-            (appDb fairAppend . foldr1 (>=>))
+            (liftA2 fairAppend . foldr1 (>=>))
             (const [])
           )
       . (traverse . traverse . uncurry $ (===))

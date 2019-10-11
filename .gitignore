@@ -1,7 +1,4 @@
-dist-newstyle/
-dist/
 .stack-work/
-
 .ghc.environment.x86_64-mingw32-8.6.5
 *.hp
 *.prof
