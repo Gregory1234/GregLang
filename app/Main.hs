@@ -5,8 +5,6 @@ module Main where
 import           GL.Args
 import           GL.Lexer
 import           GL.Parser
-import           GL.TypeChecker
-import           GL.Codegen.Eval
 import           GL.Utils
 import           Control.Monad.Except
 
@@ -19,6 +17,3 @@ main = do
     lift $ pprint tok
     ast <- liftEither $ parseGregLang inputFileArg tok
     lift $ pprint ast
-    ast' <- liftEither $ typeCheck ast
-    lift $ pprint ast
-    lift $ runGregLang ast' >>= print
