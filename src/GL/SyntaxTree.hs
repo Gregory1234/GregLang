@@ -28,7 +28,11 @@ instance Treeable ce => Treeable (AST ce) where
     ]
 
 type UntypedAST
-  = AST (Fun (FunSigTyp (PartType Integer)) (StatTyp (PartType Integer) Expr))
+  = AST
+      ( Fun
+          (FunSigTyp (PartType Integer))
+          (StatTyp (PartType Integer) (ExprTyp Expr))
+      )
 
 data Class ce = Class
   { className :: ClassName
@@ -79,22 +83,22 @@ instance Treeable Package where
   toTree = toTree . showPP
 
 data StatTyp t e =
-    SIf e (StatTyp t e) (Maybe (StatTyp t e))
-  | SFor (StatTyp t e) e (StatTyp t e) (StatTyp t e)
-  | SWhile e (StatTyp t e)
-  | SDoWhile e (StatTyp t e)
-  | SLet t Ident e
-  | SReturn e
+    SIf (e t) (StatTyp t e) (Maybe (StatTyp t e))
+  | SFor (StatTyp t e) (e t) (StatTyp t e) (StatTyp t e)
+  | SWhile (e t) (StatTyp t e)
+  | SDoWhile (e t) (StatTyp t e)
+  | SLet t Ident (e t)
+  | SReturn (e t)
   | SBreak
   | SContinue
   | SNoOp
   | SBraces [StatTyp t e]
-  | SExpr e
+  | SExpr (e t)
 
 deriving via (PrettyTree (StatTyp t e))
-  instance (Pretty (t, Ident), Treeable e) => Pretty (StatTyp t e)
+  instance (Pretty (t, Ident), Treeable (e t)) => Pretty (StatTyp t e)
 
-instance (Pretty (t, Ident), Treeable e) => Treeable (StatTyp t e) where
+instance (Pretty (t, Ident), Treeable (e t)) => Treeable (StatTyp t e) where
   toTree (SIf e s Nothing) = Node "if" [toTree e, Node "then" [toTree s]]
   toTree (SIf e s1 (Just s2)) =
     Node "if" [toTree e, Node "then" [toTree s1], Node "else" [toTree s2]]
@@ -109,6 +113,15 @@ instance (Pretty (t, Ident), Treeable e) => Treeable (StatTyp t e) where
   toTree SNoOp          = toTree "no op"
   toTree (SBraces s)    = listToTree "braces" s
   toTree (SExpr   e)    = toTree e
+
+data ExprTyp e t = ExprTyp t e
+
+deriving via (PrettyTree (ExprTyp e t))
+  instance (Pretty (t,Ident), Treeable e) => Pretty (ExprTyp e t)
+
+instance (Pretty (t,Ident), Treeable e) => Treeable (ExprTyp e t) where
+  toTree (ExprTyp t e) =
+    let (Node a b) = toTree e in Node (showPP (t, Ident a)) b
 
 data Expr =
     EIntLit Integer

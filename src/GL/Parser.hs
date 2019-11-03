@@ -2,7 +2,7 @@
   FlexibleContexts, TypeApplications, UndecidableInstances #-}
 
 module GL.Parser
-  ( parseGregLang
+  ( module GL.Parser
   )
 where
 
@@ -24,6 +24,10 @@ type Parser = P.ParsecT Void [LocToken] (State Integer)
 
 class Parsable a where
   parser :: Parser a
+
+class TypeParsable a where
+  parserType :: Parsable b => Parser (a,b)
+  parserTypeParens :: Parsable b => Parser (a,b)
 
 satisfyT :: (Token -> Maybe a) -> Parser a
 satisfyT f = fromJust . f . _tokenVal <$> P.satisfy (isJust . f . _tokenVal)
@@ -74,9 +78,14 @@ instance Parsable Package where
 instance Parsable e => Parsable (Class e) where
   parser = Class <$> (kw "class" *> parser) <*> P.many parser
 
-instance Parsable (PartType Integer, Ident) where
-  parser = do
+instance TypeParsable (PartType Integer) where
+  parserType = do
     a <- optional parser
+    i <- parser
+    t <- maybe (NoType <$> inc) (return . NameType) a
+    return (t, i)
+  parserTypeParens = do
+    a <- optional (parens parser)
     i <- parser
     t <- maybe (NoType <$> inc) (return . NameType) a
     return (t, i)
@@ -88,16 +97,16 @@ safeBraces = preKw "{" helper
 instance (Parsable (Ident,sig),Parsable cont) => Parsable (Fun sig cont) where
   parser = uncurry Fun <$> parser <*> parser
 
-instance Parsable (t,Ident) => Parsable (Ident,FunSigTyp t) where
+instance TypeParsable t => Parsable (Ident,FunSigTyp t) where
   parser = do
-    (t, n) <- parser
-    a      <- maybeCommas parser
+    (t, n) <- parserType
+    a      <- maybeCommas parserType
     return (n, FunSigTyp t a)
 
-instance (Parsable (t,Ident),Parsable e) => Parsable [StatTyp t e] where
+instance (TypeParsable t,Parsable (e t)) => Parsable [StatTyp t e] where
   parser = safeBraces
 
-instance (Parsable (t,Ident),Parsable e) => Parsable (StatTyp t e) where
+instance (TypeParsable t,Parsable (e t)) => Parsable (StatTyp t e) where
   parser = P.choice
     [ SIf <$> preKw "if" parser <*> parser <*> optional (preKw "else" parser)
     , (uncurry . uncurry) SFor
@@ -112,7 +121,7 @@ instance (Parsable (t,Ident),Parsable e) => Parsable (StatTyp t e) where
     <*> parser
     , SWhile <$> preKw "while" parser <*> parser
     , sc $ flip SDoWhile <$> preKw "do" parser <*> preKw "while" parser
-    , sc $ uncurry SLet <$> preKw "let" parser <*> preKw "=" parser
+    , sc $ uncurry SLet <$> preKw "let" parserType <*> preKw "=" parser
     , sc $ SReturn <$> preKw "return" parser
     , sc $ kw "break" $> SBreak
     , sc $ kw "continue" $> SContinue
@@ -121,6 +130,9 @@ instance (Parsable (t,Ident),Parsable e) => Parsable (StatTyp t e) where
     , sc $ SExpr <$> parser
     ]
     where sc = (<* optional (kw ";"))
+
+instance (TypeParsable t,Parsable e) => Parsable (ExprTyp e t) where
+  parser = uncurry ExprTyp <$> parserTypeParens
 
 instance Parsable Expr where
   parser = do
@@ -133,7 +145,7 @@ instance Parsable Expr where
       , EParen <$> parens parser
       ]
     ds <- P.many (preKw "." parser <&> optionL (parens (maybeCommas parser)))
-    foldM (\e (f, a) -> return $ EVar (Just e) f a) e ds
+    foldM (\b (f, a) -> return $ EVar (Just b) f a) e ds
     where litParser n f g = P.label n $ f <$> satisfyT (^? g)
 
 parseGregLang :: FilePath -> [LocToken] -> Either String UntypedAST
