@@ -28,6 +28,7 @@ class Parsable a where
 class TypeParsable a where
   parserType :: Parsable b => Parser (a,b)
   parserTypeParens :: Parsable b => Parser (a,b)
+  parserNoType :: Parser a
 
 satisfyT :: (Token -> Maybe a) -> Parser a
 satisfyT f = fromJust . f . _tokenVal <$> P.satisfy (isJust . f . _tokenVal)
@@ -89,6 +90,7 @@ instance TypeParsable (PartType Integer) where
     i <- parser
     t <- maybe (NoType <$> inc) (return . NameType) a
     return (t, i)
+  parserNoType = NoType <$> inc
 
 safeBraces :: Parsable a => Parser [a]
 safeBraces = preKw "{" helper
@@ -131,10 +133,10 @@ instance (TypeParsable t,Parsable (e t)) => Parsable (StatTyp t e) where
     ]
     where sc = (<* optional (kw ";"))
 
-instance (TypeParsable t,Parsable e) => Parsable (ExprTyp e t) where
+instance TypeParsable t => Parsable (ExprTyp t) where
   parser = uncurry ExprTyp <$> parserTypeParens
 
-instance Parsable Expr where
+instance TypeParsable t => Parsable (Expr t) where
   parser = do
     e <- P.choice
       [ litParser "<int literal>"    EIntLit    _TIntLit
@@ -145,7 +147,12 @@ instance Parsable Expr where
       , EParen <$> parens parser
       ]
     ds <- P.many (preKw "." parser <&> optionL (parens (maybeCommas parser)))
-    foldM (\b (f, a) -> return $ EVar (Just b) f a) e ds
+    foldM
+      (\b (f, a) ->
+        flip (flip EVar f) a . Just . flip ExprTyp b <$> parserNoType
+      )
+      e
+      ds
     where litParser n f g = P.label n $ f <$> satisfyT (^? g)
 
 parseGregLang :: FilePath -> [LocToken] -> Either String UntypedAST

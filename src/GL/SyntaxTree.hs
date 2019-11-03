@@ -29,10 +29,7 @@ instance Treeable ce => Treeable (AST ce) where
 
 type UntypedAST
   = AST
-      ( Fun
-          (FunSigTyp (PartType Integer))
-          (StatTyp (PartType Integer) (ExprTyp Expr))
-      )
+      (Fun (FunSigTyp (PartType Integer)) (StatTyp (PartType Integer) ExprTyp))
 
 data Class ce = Class
   { className :: ClassName
@@ -114,26 +111,28 @@ instance (Pretty (t, Ident), Treeable (e t)) => Treeable (StatTyp t e) where
   toTree (SBraces s)    = listToTree "braces" s
   toTree (SExpr   e)    = toTree e
 
-data ExprTyp e t = ExprTyp t e
+data ExprTyp t = ExprTyp t (Expr t)
 
-deriving via (PrettyTree (ExprTyp e t))
-  instance (Pretty (t,Ident), Treeable e) => Pretty (ExprTyp e t)
+deriving via (PrettyTree (ExprTyp t))
+  instance (Pretty (t,Ident)) => Pretty (ExprTyp t)
 
-instance (Pretty (t,Ident), Treeable e) => Treeable (ExprTyp e t) where
+instance (Pretty (t,Ident)) => Treeable (ExprTyp t) where
   toTree (ExprTyp t e) =
     let (Node a b) = toTree e in Node (showPP (t, Ident a)) b
 
-data Expr =
+data Expr t =
     EIntLit Integer
   | EFloatLit Double
   | ECharLit Char
   | EStringLit String
-  | EVar (Maybe Expr) Ident [Expr]
-  | EIf Expr Expr Expr
-  | EParen Expr
-    deriving Pretty via (PrettyTree Expr)
+  | EVar (Maybe (ExprTyp t)) Ident [ExprTyp t]
+  | EIf (ExprTyp t) (ExprTyp t) (ExprTyp t)
+  | EParen (ExprTyp t)
 
-instance Treeable Expr where
+deriving via (PrettyTree (Expr t))
+  instance (Pretty (t,Ident)) => Pretty (Expr t)
+
+instance (Pretty (t,Ident)) => Treeable (Expr t) where
   toTree (EIntLit    i      ) = toTree $ showPP i
   toTree (EFloatLit  f      ) = toTree $ showPP f
   toTree (EStringLit s      ) = toTree $ showPP s
