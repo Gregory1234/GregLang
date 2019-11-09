@@ -1,6 +1,7 @@
 package main
 
 main{
-  let x = 5
-  return x
+  ;
+  12;13
+  122
 }

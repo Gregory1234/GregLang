@@ -1,7 +1,10 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving, DerivingVia, StandaloneDeriving,
   TypeApplications, FlexibleContexts, UndecidableInstances,
   FlexibleInstances, OverloadedStrings, PolyKinds, DataKinds #-}
-module SyntaxTree(module SyntaxTree) where
+module SyntaxTree
+  ( module SyntaxTree
+  )
+where
 
 import           GL.Utils
 import           GL.Parser
@@ -10,13 +13,21 @@ import           GL.Ident
 import           GL.Token
 import           GHC.Exts
 import qualified Text.Megaparsec               as P
-import           Text.Megaparsec                ( (<|>) )
-import           Data.Functor.Const
-import           Control.Monad
 import           Control.Applicative
 import           Data.List
 
-type UntypedAST = AST (FunTyp FunSigTyp (StatTypUnion '[SNoOp] (Const ())) (PartType Integer))
+type UntypedAST
+  = AST
+      ( FunTyp
+          FunSigTyp
+          ( StatTypUnion
+              '[SNoOp, SExpr]
+              ( ExprTypUnion
+                  '[ELit Integer, ELit Double, ELit String, ELit Char]
+              )
+          )
+          (PartType Integer)
+      )
 
 --
 --AST
@@ -88,8 +99,9 @@ instance TypeParsable t => Parsable (Ident,FunSigTyp t) where
     return (n, FunSigTyp t a)
 
 instance (Pretty (t, Ident), Treeable (stat t)) => Treeable (FunTyp FunSigTyp stat t) where
-  toTree (FunTyp n (FunSigTyp t as) s) = 
-    Node ("fun " ++ showPP (t, n)) (listToTree "args" (showPP <$> as) : toForest s)
+  toTree (FunTyp n (FunSigTyp t as) s) = Node
+    ("fun " ++ showPP (t, n))
+    (listToTree "args" (showPP <$> as) : toForest s)
 
 deriving via (PrettyTree (FunTyp FunSigTyp stat t))
   instance (Pretty (t, Ident), Treeable (stat t)) => Pretty (FunTyp FunSigTyp stat t)
@@ -153,16 +165,28 @@ instance IsType (PartType Integer) where
 
 data SNoOp e t = SNoOp
   deriving Pretty via (PrettyTree (SNoOp e t))
-
 instance Parsable (SNoOp e t) where
   parser = kw ";" $> SNoOp
-
 instance Treeable (SNoOp e t) where
   toTree _ = toTree ("no op" :: String)
-
 instance IsSyntax (SNoOp e t) where
 instance IsStatTyp SNoOp where
+
+newtype SExpr e t = SExpr (ExprFix e t)
+deriving instance (IsExprTyp e, IsType t) => Pretty (SExpr e t)
+deriving instance (IsExprTyp e, IsType t) => Treeable (SExpr e t)
+deriving instance (IsExprTyp e, IsType t) => Parsable (SExpr e t)
+deriving instance (IsExprTyp e, IsType t) => IsSyntax (SExpr e t)
+instance IsStatTyp SExpr where
 
 --
 --Expr
 --
+
+newtype ELit l e t = ELit l
+  deriving newtype Parsable
+  deriving Pretty via (PrettyTree (ELit l e t))
+instance Pretty l => Treeable (ELit l e t) where
+  toTree (ELit l) = toTree ("lit " ++ showPP l)
+instance (Pretty l, Parsable l) => IsSyntax (ELit l e t) where
+instance (Pretty l, Parsable l) => IsExprTyp (ELit l) where

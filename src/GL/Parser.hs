@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances, TypeFamilies,
-  FlexibleContexts, TypeApplications, UndecidableInstances #-}
+  FlexibleContexts, UndecidableInstances #-}
 
 module GL.Parser
   ( module GL.Parser
