@@ -7,7 +7,6 @@ where
 import           GL.SyntaxTree
 import           GL.Parser
 import           GL.Utils
-import           GregLang.SyntaxTree.Type
 
 newtype ELit l e t = ELit l
   deriving Parsable

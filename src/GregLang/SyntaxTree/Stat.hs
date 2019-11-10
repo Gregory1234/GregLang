@@ -8,21 +8,28 @@ where
 import           GL.SyntaxTree
 import           GL.Parser
 import           GL.Utils
-import           GregLang.SyntaxTree.Expr
-import           GregLang.SyntaxTree.Type
 
-data SNoOp e t = SNoOp
-  deriving Pretty via (PrettyTree (SNoOp e t))
-instance Parsable (SNoOp e t) where
+data SNoOp s e t = SNoOp
+  deriving Pretty via (PrettyTree (SNoOp s e t))
+instance Parsable (SNoOp s e t) where
   parser = kw ";" $> SNoOp
-instance Treeable (SNoOp e t) where
+instance Treeable (SNoOp s e t) where
   toTree _ = toTree ("no op" :: String)
-instance IsSyntax (SNoOp e t) where
+instance IsSyntax (SNoOp s e t) where
 instance IsStatTyp SNoOp where
 
-newtype SExpr e t = SExpr (ExprFix e t)
-deriving instance (IsExprTyp e, IsType t) => Pretty (SExpr e t)
-deriving instance (IsExprTyp e, IsType t) => Treeable (SExpr e t)
-deriving instance (IsExprTyp e, IsType t) => Parsable (SExpr e t)
-deriving instance (IsExprTyp e, IsType t) => IsSyntax (SExpr e t)
+newtype SExpr s e t = SExpr (ExprFix e t)
+deriving instance (IsExprTyp e, IsType t) => Pretty (SExpr s e t)
+deriving instance (IsExprTyp e, IsType t) => Treeable (SExpr s e t)
+deriving instance (IsExprTyp e, IsType t) => Parsable (SExpr s e t)
+deriving instance (IsExprTyp e, IsType t) => IsSyntax (SExpr s e t)
 instance IsStatTyp SExpr where
+
+newtype SBraces s e t = SBraces [s]
+  deriving Pretty via (PrettyTree (SBraces s e t))
+instance IsSyntax s => Treeable (SBraces s e t) where
+  toTree (SBraces as) = listToTree "braces" as
+instance IsSyntax s => Parsable (SBraces s e t) where
+  parser = SBraces <$> safeBraces
+instance IsSyntax s => IsSyntax (SBraces s e t)
+instance IsStatTyp SBraces where

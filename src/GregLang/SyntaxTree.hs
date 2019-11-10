@@ -22,8 +22,8 @@ type UntypedAST
   = AST
       ( FunTyp
           FunSigTyp
-          ( StatTypUnion
-              '[SNoOp, SExpr]
+          ( StatFix
+              (StatTypUnion '[SNoOp, SExpr, SBraces])
               ( ExprTypUnion
                   '[ELit Integer, ELit Double, ELit String, ELit Char]
               )
