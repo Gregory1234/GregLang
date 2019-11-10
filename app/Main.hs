@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Main where
 
-import           SyntaxTree
+import           GregLang.SyntaxTree
 import           GregLang
 import           Data.Proxy
 
