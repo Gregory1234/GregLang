@@ -23,7 +23,7 @@ type UntypedAST
       ( FunTyp
           FunSigTyp
           ( StatTypFix
-              (StatTypUnion '[SNoOp, SExpr, SBraces])
+              (StatTypUnion '[SNoOp, SExpr, SBraces, SIf, SWhile, SFor])
               ( ExprTypFix
                   ( ExprTypUnion
                       '[ELit Integer, ELit Double, ELit String, ELit Char]

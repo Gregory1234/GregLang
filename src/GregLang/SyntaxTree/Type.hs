@@ -55,4 +55,4 @@ instance Treeable Package where
 instance Parsable Package where
   parser = Package <$> P.sepBy (parser @Ident) (kw ".")
 
-instance IsType (PartType Integer) where
+instance IsType (PartType Integer)

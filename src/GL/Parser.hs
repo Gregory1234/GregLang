@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances, TypeFamilies,
-  FlexibleContexts, UndecidableInstances #-}
+  FlexibleContexts, UndecidableInstances, RankNTypes #-}
 
 module GL.Parser
   ( module GL.Parser
@@ -10,14 +10,11 @@ import           Data.Void
 import           GL.Token
 import           GL.Ident
 import qualified Text.Megaparsec               as P
-import           Text.Megaparsec                ( (<|>) )
 import           Control.Lens            hiding ( (<&>)
                                                 , op
                                                 )
 import           GL.Utils
-import           Control.Monad
 import           Control.Monad.State
-import           Control.Applicative
 
 type Parser = P.ParsecT Void [LocToken] (State Integer)
 
@@ -64,6 +61,7 @@ maybeCommas a =
 inc :: (MonadState a m, Num a) => m a
 inc = get <* modify (+ 1)
 
+litParser :: String -> Prism' Token a -> Parser a
 litParser n g = P.label n (satisfyT (^? g))
 
 instance Parsable Integer where

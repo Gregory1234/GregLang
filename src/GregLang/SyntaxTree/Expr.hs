@@ -13,5 +13,5 @@ newtype ELit l e t = ELit l
   deriving Pretty via (PrettyTree (ELit l e t))
 instance Pretty l => Treeable (ELit l e t) where
   toTree (ELit l) = toTree ("lit " ++ showPP l)
-instance (Pretty l, Parsable l) => IsSyntax (ELit l e t) where
-instance (Pretty l, Parsable l) => IsExprTyp (ELit l e) where
+instance (Pretty l, Parsable l) => IsSyntax (ELit l e t)
+instance (Pretty l, Parsable l) => IsExprTyp (ELit l e)

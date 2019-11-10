@@ -14,6 +14,7 @@ module GL.Utils
   , module Data.Foldable
   , toMaybe
   , liftA2
+  , (<|>)
   , module GL.Utils
   )
 where
@@ -224,3 +225,9 @@ only :: [a] -> a
 only [x] = x
 only []  = error "GL.Utils.only: []"
 only _   = error "GL.Utils.only: too big"
+
+infixl 3 |>
+
+-- | Add a default value for an 'Alternative'.
+(|>) :: Alternative f => f a -> a -> f a
+f |> a = f <|> pure a
