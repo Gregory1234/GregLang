@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, QuantifiedConstraints, KindSignatures, TypeFamilies,
   TypeOperators, DataKinds, PolyKinds, GeneralizedNewtypeDeriving,
-  StandaloneDeriving, UndecidableInstances #-}
+  StandaloneDeriving, UndecidableInstances, DerivingVia #-}
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree
@@ -64,16 +64,18 @@ instance (IsStatTyp (s1 s), IsStatTyp (s2 s))
 
 class (forall t. IsType t => IsSyntax (e t)) => IsExprTyp e where
 
-newtype ExprTypFix e t = ExprFix (e (ExprTypFix e t) t)
+data ExprTypFix e t = ExprTypFix t (e (ExprTypFix e t) t)
 
-deriving instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
-  => Treeable (ExprTypFix e t)
-deriving instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
-  => Pretty (ExprTypFix e t)
-deriving instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
-  => Parsable (ExprTypFix e t)
-deriving instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
-  => IsSyntax (ExprTypFix e t)
+instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
+  => Treeable (ExprTypFix e t) where
+  toTree (ExprTypFix t e) =
+    let (Node a b) = toTree e in Node (showPP (t, ClearString a)) b
+deriving via (PrettyTree (ExprTypFix e t))
+  instance (IsExprTyp (e (ExprTypFix e t)), IsType t) => Pretty (ExprTypFix e t)
+instance (IsExprTyp (e (ExprTypFix e t)), IsType t)
+  => Parsable (ExprTypFix e t) where
+  parser = uncurry ExprTypFix <$> parserTypeParens
+instance (IsExprTyp (e (ExprTypFix e t)), IsType t) => IsSyntax (ExprTypFix e t)
 instance (forall t. IsType t => IsExprTyp (e (ExprTypFix e t)))
   => IsExprTyp (ExprTypFix e)
 

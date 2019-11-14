@@ -26,7 +26,7 @@ type UntypedAST
               (StatTypUnion '[SNoOp, SExpr, SBraces, SIf, SWhile, SFor])
               ( ExprTypFix
                   ( ExprTypUnion
-                      '[ELit Integer, ELit Double, ELit String, ELit Char]
+                      '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
                   )
               )
           )
