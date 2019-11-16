@@ -18,20 +18,12 @@ import           GL.SyntaxTree
 import           GL.Token
 import           Text.Megaparsec               as P
 
-type UntypedAST
-  = AST
-      ( FunTyp
-          FunSigTyp
-          ( StatTypFix
-              (StatTypUnion '[SNoOp, SExpr, SBraces, SIf, SWhile, SFor])
-              ( ExprTypFix
-                  ( ExprTypUnion
-                      '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
-                  )
-              )
-          )
-          (PartType Integer)
-      )
+type Statements = '[SNoOp, SExpr, SBraces, SIf, SWhile, SFor]
+type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
+
+type DefaultExpr = ExprTypFix (ExprTypUnion Expressions)
+type DefaultStat = StatTypFix (StatTypUnion Statements) DefaultExpr
+type UntypedAST = AST (FunTyp FunSigTyp DefaultStat (PartType Integer))
 
 --
 --AST
@@ -102,15 +94,19 @@ instance TypeParsable t => Parsable (Ident,FunSigTyp t) where
     a      <- maybeCommas parserType
     return (n, FunSigTyp t a)
 
-instance (Pretty (t, Ident), Treeable (stat t)) => Treeable (FunTyp FunSigTyp stat t) where
+instance (Pretty (t, Ident), Treeable (stat t))
+  => Treeable (FunTyp FunSigTyp stat t) where
   toTree (FunTyp n (FunSigTyp t as) s) = Node
     ("fun " ++ showPP (t, n))
     (listToTree "args" (showPP <$> as) : toForest s)
 
 deriving via (PrettyTree (FunTyp FunSigTyp stat t))
-  instance (Pretty (t, Ident), Treeable (stat t)) => Pretty (FunTyp FunSigTyp stat t)
+  instance (Pretty (t, Ident), Treeable (stat t))
+    => Pretty (FunTyp FunSigTyp stat t)
 
-instance (Parsable (Ident,sig t),Parsable (stat t)) => Parsable (FunTyp sig stat t) where
+instance (Parsable (Ident,sig t),Parsable (stat t))
+  => Parsable (FunTyp sig stat t) where
   parser = uncurry FunTyp <$> parser <*> safeBraces
 
-instance (Pretty (t, Ident), Treeable (stat t), Parsable (Ident,FunSigTyp t), Parsable (stat t)) => IsSyntax (FunTyp FunSigTyp stat t) where
+instance (Pretty (t, Ident), Treeable (stat t), Parsable (Ident,FunSigTyp t),
+  Parsable (stat t)) => IsSyntax (FunTyp FunSigTyp stat t) where

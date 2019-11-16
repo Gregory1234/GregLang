@@ -1,6 +1,9 @@
 {-# LANGUAGE RecordWildCards, ScopedTypeVariables #-}
 
-module GregLang where
+module GregLang
+  ( module GregLang
+  )
+where
 
 import           GL.Args
 import           GL.Lexer
