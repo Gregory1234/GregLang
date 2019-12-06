@@ -10,6 +10,7 @@ import           GL.Parser
 import           GL.Utils
 import           Text.Megaparsec               as P
 
+sc :: Parser a -> Parser a
 sc = (<* optional (kw ";"))
 
 data SNoOp s e t = SNoOp

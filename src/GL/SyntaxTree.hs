@@ -102,22 +102,3 @@ instance (IsExprTyp (e1 e), IsExprTyp (e2 e), IsType t)
 instance (IsExprTyp (e1 e), IsExprTyp (e2 e)) => IsExprTyp (ExprTypOr e1 e2 e)
 
 class (forall e. IsExprTyp e => IsExprTyp (f e)) => IsExprTransTyp f
-
-data ExprTransTypThen f1 f2 e t = ETTLeft (f1 e t) | ETTRight (f2 (f1 e) t)
-
-instance (Treeable (f1 e t), Treeable (f2 (f1 e) t))
-  => Treeable (ExprTransTypThen f1 f2 e t) where
-  toTree (ETTLeft  x) = toTree x
-  toTree (ETTRight x) = toTree x
-deriving via (PrettyTree (ExprTransTypThen f1 f2 e t))
-  instance (Treeable (f1 e t), Treeable (f2 (f1 e) t))
-    => Pretty (ExprTransTypThen f1 f2 e t)
-instance (Parsable (f1 e t), Parsable (f2 (f1 e) t))
-  => Parsable (ExprTransTypThen f1 f2 e t) where
-  parser = (ETTRight <$> parser) <|> (ETTLeft <$> parser)
-instance (IsSyntax (f1 e t), IsSyntax (f2 (f1 e) t))
-  => IsSyntax (ExprTransTypThen f1 f2 e t)
-instance (IsExprTyp (f1 e), IsExprTransTyp f2, IsExprTyp (f2 (f1 e)))
-  => IsExprTyp (ExprTransTypThen f1 f2 e)
-instance (IsExprTransTyp f1, IsExprTransTyp f2)
-  => IsExprTransTyp (ExprTransTypThen f1 f2)
