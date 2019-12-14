@@ -13,22 +13,20 @@ import           Text.Megaparsec               as P
 sc :: Parser a -> Parser a
 sc = (<* optional (kw ";"))
 
-data SNoOp s e t = SNoOp
-  deriving Pretty via (PrettyTree (SNoOp s e t))
-instance Parsable (SNoOp s e t) where
+data SNoOp e t = SNoOp
+  deriving Pretty via (PrettyTree (SNoOp e t))
+instance Parsable (SNoOp e t) where
   parser = kw ";" $> SNoOp
-instance Treeable (SNoOp s e t) where
+instance Treeable (SNoOp e t) where
   toTree _ = toTree ("no op" :: String)
-instance IsSyntax (SNoOp s e t)
-instance IsStatTyp (SNoOp s)
+instance IsSyntax (SNoOp e t)
 
-newtype SExpr s e t = SExpr (e t)
-deriving instance (IsExprTyp e, IsType t) => Pretty (SExpr s e t)
-deriving instance (IsExprTyp e, IsType t) => Treeable (SExpr s e t)
-instance (IsExprTyp e, IsType t) => Parsable (SExpr s e t) where
+newtype SExpr e t = SExpr (e t)
+deriving instance (Pretty (e t)) => Pretty (SExpr e t)
+deriving instance (Treeable (e t)) => Treeable (SExpr e t)
+instance (Parsable (e t)) => Parsable (SExpr e t) where
   parser = SExpr <$> sc parser
-deriving instance (IsExprTyp e, IsType t) => IsSyntax (SExpr s e t)
-instance IsStatTyp (SExpr s)
+deriving instance (IsSyntax (e t)) => IsSyntax (SExpr e t)
 
 newtype SBraces s e t = SBraces [s]
   deriving Pretty via (PrettyTree (SBraces s e t))
@@ -37,7 +35,6 @@ instance Treeable s => Treeable (SBraces s e t) where
 instance Parsable s => Parsable (SBraces s e t) where
   parser = SBraces <$> safeBraces
 instance IsSyntax s => IsSyntax (SBraces s e t)
-instance IsSyntax s => IsStatTyp (SBraces s)
 
 data SIf s e t = SIf (e t) s | SIfElse (e t) s s
   deriving Pretty via (PrettyTree (SIf s e t))
@@ -50,8 +47,7 @@ instance (Parsable (e t), Parsable s) => Parsable (SIf s e t) where
     e <- preKw "if" parser
     s <- parser
     (SIfElse e s <$> preKw "else" parser) |> SIf e s
-instance (IsExprTyp e, IsSyntax s, IsType t) => IsSyntax (SIf s e t)
-instance IsSyntax s => IsStatTyp (SIf s)
+instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SIf s e t)
 
 
 data SWhile s e t = SWhile (e t) s | SDoWhile s (e t)
@@ -63,8 +59,7 @@ instance (Parsable (e t), Parsable s) => Parsable (SWhile s e t) where
   parser =
     (SWhile <$> preKw "while" parser <*> parser)
       <|> (SDoWhile <$> preKw "do" parser <*> preKw "while" (sc parser))
-instance (IsExprTyp e, IsSyntax s, IsType t) => IsSyntax (SWhile s e t)
-instance IsSyntax s => IsStatTyp (SWhile s)
+instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SWhile s e t)
 
 data SFor s e t = SFor s (e t) s s
   deriving Pretty via (PrettyTree (SFor s e t))
@@ -80,5 +75,4 @@ instance (Parsable (e t), Parsable s) => Parsable (SFor s e t) where
         <|> parser
         <&> sc parser
         <&> parser
-instance (IsExprTyp e, IsSyntax s, IsType t) => IsSyntax (SFor s e t)
-instance IsSyntax s => IsStatTyp (SFor s)
+instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SFor s e t)
