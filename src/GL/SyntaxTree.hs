@@ -39,6 +39,40 @@ instance (Parsable (e t), Parsable (ExprTypU (e':es) t))
 instance (Treeable (ExprTypU es t), Pretty (ExprTypU es t), Parsable (ExprTypU es t))
   => IsSyntax (ExprTypU es t)
 
+data ExprTypTDo es b c t where
+  ExprTypTDoB ::b t -> ExprTypTDo '[] b c t
+  ExprTypTDoF ::e c (ExprTypTDo (e:es) b c) t -> ExprTypTDo (e:es) b c t
+  ExprTypTDoN ::ExprTypTDo es b c t -> ExprTypTDo (e:es) b c t
+
+instance Treeable (b t) => Treeable (ExprTypTDo '[] b c t) where
+  toTree (ExprTypTDoB x) = toTree x
+instance (Treeable (e c (ExprTypTDo (e:es) b c) t), Treeable (ExprTypTDo es b c t))
+  => Treeable (ExprTypTDo (e:es) b c t) where
+  toTree (ExprTypTDoF x) = toTree x
+  toTree (ExprTypTDoN x) = toTree x
+instance Pretty (b t) => Pretty (ExprTypTDo '[] b c t) where
+  showPP (ExprTypTDoB x) = showPP x
+instance (Pretty (e c (ExprTypTDo (e:es) b c) t), Pretty (ExprTypTDo es b c t))
+  => Pretty (ExprTypTDo (e:es) b c t) where
+  showPP (ExprTypTDoF x) = showPP x
+  showPP (ExprTypTDoN x) = showPP x
+instance Parsable (b t) => Parsable (ExprTypTDo '[] b c t) where
+  parser = ExprTypTDoB <$> parser
+instance (Treeable (ExprTypTDo es b c t), Pretty (ExprTypTDo es b c t), Parsable (ExprTypTDo es b c t))
+  => IsSyntax (ExprTypTDo es b c t)
+
+newtype ExprTypFix (e :: (* -> *) -> * -> *) t
+  = ExprTypFix (e (ExprTypFix e) t)
+
+deriving instance Treeable (e (ExprTypFix e) t)
+  => Treeable (ExprTypFix e t)
+deriving instance Pretty (e (ExprTypFix e) t)
+  => Pretty (ExprTypFix e t)
+deriving instance Parsable (e (ExprTypFix e) t)
+  => Parsable (ExprTypFix e t)
+deriving instance IsSyntax (e (ExprTypFix e) t)
+  => IsSyntax (ExprTypFix e t)
+
 data StatTypU l e t where
   StatTypUF ::z e t -> StatTypU (z:zs) e t
   StatTypUN ::StatTypU zs e t -> StatTypU (z:zs) e t

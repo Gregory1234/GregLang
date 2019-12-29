@@ -15,6 +15,7 @@ module GL.Utils
   , toMaybe
   , liftA2
   , (<|>)
+  , module Debug.Trace
   , module GL.Utils
   )
 where
@@ -49,6 +50,18 @@ traceN
   -> a
   -> a
 traceN s a = trace (s ++ show a) a
+
+-- | Like 'traceN' but using Pretty.
+--
+-- >>> traceP "msg " 12
+-- msg 12
+-- 12
+traceP
+  :: Pretty a
+  => String -- ^ the prepended message
+  -> a
+  -> a
+traceP s a = trace (s ++ showPP a) a
 
 -- | Conversion of values to 'Tree' of 'String's.
 class Treeable a where

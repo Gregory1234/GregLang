@@ -1,5 +1,5 @@
 package main
 
 main{
-  if x y
+  1.hello(2.world(((5))))
 }

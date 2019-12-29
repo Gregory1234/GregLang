@@ -21,8 +21,9 @@ import           Text.Megaparsec               as P
 type Statements = '[SNoOp, SExpr]
 type StatementsT = '[SIf, ConstStatTypT (StatTypU Statements)]
 type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char]
+type ExpressionsT = '[EVar, EParens]
 
-type DefaultExpr = ExprTypU Expressions
+type DefaultExpr = ExprTypFix (ExprTypTDo ExpressionsT (ExprTypU Expressions))
 type DefaultStat = StatTypFix (StatTypTU StatementsT) DefaultExpr
 type UntypedAST = AST (FunTyp FunSigTyp DefaultStat (PartType Integer))
 
