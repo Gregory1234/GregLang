@@ -13,60 +13,69 @@ import           Text.Megaparsec               as P
 sc :: Parser a -> Parser a
 sc = (<* optional (kw ";"))
 
-data SNoOp e t = SNoOp
-  deriving Pretty via (PrettyTree (SNoOp e t))
-instance Parsable (SNoOp e t) where
+data SNoOp (s :: (* -> *) -> * -> *) e t = SNoOp
+  deriving Pretty via (PrettyTree (SNoOp s e t))
+instance Parsable (SNoOp s e t) where
   parser = kw ";" $> SNoOp
-instance Treeable (SNoOp e t) where
+instance Treeable (SNoOp s e t) where
   toTree _ = toTree ("no op" :: String)
-instance IsSyntax (SNoOp e t)
+instance IsSyntax (SNoOp s e t)
+instance IsStat (SNoOp s)
+instance IsStatT SNoOp
 
-newtype SExpr e t = SExpr (e t)
-deriving instance (Pretty (e t)) => Pretty (SExpr e t)
-deriving instance (Treeable (e t)) => Treeable (SExpr e t)
-instance (Parsable (e t)) => Parsable (SExpr e t) where
+newtype SExpr (s :: (* -> *) -> * -> *) e t = SExpr (e t)
+deriving instance (Pretty (e t)) => Pretty (SExpr s e t)
+deriving instance (Treeable (e t)) => Treeable (SExpr s e t)
+instance (Parsable (e t)) => Parsable (SExpr s e t) where
   parser = SExpr <$> sc parser
-deriving instance (IsSyntax (e t)) => IsSyntax (SExpr e t)
+deriving instance (IsSyntax (e t)) => IsSyntax (SExpr s e t)
+instance IsStat (SExpr s)
+instance IsStatT SExpr
 
-newtype SBraces s e t = SBraces [s]
+newtype SBraces s e t = SBraces [s e t]
   deriving Pretty via (PrettyTree (SBraces s e t))
-instance Treeable s => Treeable (SBraces s e t) where
+instance Treeable (s e t) => Treeable (SBraces s e t) where
   toTree (SBraces as) = listToTree "braces" as
-instance Parsable s => Parsable (SBraces s e t) where
+instance Parsable (s e t) => Parsable (SBraces s e t) where
   parser = SBraces <$> safeBraces
-instance IsSyntax s => IsSyntax (SBraces s e t)
+instance IsSyntax (s e t) => IsSyntax (SBraces s e t)
+instance IsStat s => IsStat (SBraces s)
+instance IsStatT SBraces
 
-data SIf s e t = SIf (e t) s | SIfElse (e t) s s
+data SIf s e t = SIf (e t) (s e t) | SIfElse (e t) (s e t) (s e t)
   deriving Pretty via (PrettyTree (SIf s e t))
-instance (Treeable (e t), Treeable s) => Treeable (SIf s e t) where
+instance (Treeable (e t), Treeable (s e t)) => Treeable (SIf s e t) where
   toTree (SIf e s) = Node "if" [toTree e, listToTree "then" [s]]
   toTree (SIfElse e s1 s2) =
     Node "if" [toTree e, listToTree "then" [s1], listToTree "else" [s2]]
-instance (Parsable (e t), Parsable s) => Parsable (SIf s e t) where
+instance (Parsable (e t), Parsable (s e t)) => Parsable (SIf s e t) where
   parser = do
     e <- preKw "if" parser
     s <- parser
     (SIfElse e s <$> preKw "else" parser) |> SIf e s
-instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SIf s e t)
+instance (IsSyntax (e t), IsSyntax (s e t)) => IsSyntax (SIf s e t)
+instance IsStat s => IsStat (SIf s)
+instance IsStatT SIf
 
-
-data SWhile s e t = SWhile (e t) s | SDoWhile s (e t)
+data SWhile s e t = SWhile (e t) (s e t) | SDoWhile (s e t) (e t)
   deriving Pretty via (PrettyTree (SWhile s e t))
-instance (Treeable (e t), Treeable s) => Treeable (SWhile s e t) where
+instance (Treeable (e t), Treeable (s e t)) => Treeable (SWhile s e t) where
   toTree (SWhile   e s) = Node "while" [toTree e, listToTree "do" [s]]
   toTree (SDoWhile s e) = Node "do" [toTree s, listToTree "while" [e]]
-instance (Parsable (e t), Parsable s) => Parsable (SWhile s e t) where
+instance (Parsable (e t), Parsable (s e t)) => Parsable (SWhile s e t) where
   parser =
     (SWhile <$> preKw "while" parser <*> parser)
       <|> (SDoWhile <$> preKw "do" parser <*> preKw "while" (sc parser))
-instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SWhile s e t)
+instance (IsSyntax (e t), IsSyntax (s e t)) => IsSyntax (SWhile s e t)
+instance IsStat s => IsStat (SWhile s)
+instance IsStatT SWhile
 
-data SFor s e t = SFor s (e t) s s
+data SFor s e t = SFor (s e t) (e t) (s e t) (s e t)
   deriving Pretty via (PrettyTree (SFor s e t))
-instance (Treeable (e t), Treeable s) => Treeable (SFor s e t) where
+instance (Treeable (e t), Treeable (s e t)) => Treeable (SFor s e t) where
   toTree (SFor s1 e s2 s3) =
     Node "for" [toTree s1, toTree e, toTree s2, listToTree "do" [s3]]
-instance (Parsable (e t), Parsable s) => Parsable (SFor s e t) where
+instance (Parsable (e t), Parsable (s e t)) => Parsable (SFor s e t) where
   parser = uncurry (uncurry SFor) <$> preKw "for" helper <*> parser
    where
     helper =
@@ -75,4 +84,6 @@ instance (Parsable (e t), Parsable s) => Parsable (SFor s e t) where
         <|> parser
         <&> sc parser
         <&> parser
-instance (IsSyntax (e t), IsSyntax s) => IsSyntax (SFor s e t)
+instance (IsSyntax (e t), IsSyntax (s e t)) => IsSyntax (SFor s e t)
+instance IsStat s => IsStat (SFor s)
+instance IsStatT SFor

@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, QuantifiedConstraints, TypeOperators, DataKinds,
   PolyKinds, UndecidableInstances, GADTs, FlexibleInstances, EmptyCase,
-  GeneralizedNewtypeDeriving, StandaloneDeriving #-}
+  GeneralizedNewtypeDeriving, StandaloneDeriving, TypeFamilies #-}
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree
@@ -15,123 +15,83 @@ class (Pretty t, forall a. Pretty a => Pretty (t,a), TypeParsable t) => IsType t
 
 class (Treeable e, Pretty e, Parsable e) => IsSyntax e
 
-data ExprTypU l t where
-  ExprTypUF ::e t -> ExprTypU (e:es) t
-  ExprTypUN ::ExprTypU es t -> ExprTypU (e:es) t
+class (forall t. IsType t => IsSyntax (e t)) => IsExpr e
 
-instance Treeable (ExprTypU '[] t) where
-  toTree x = case x of {}
-instance (Treeable (e t),Treeable (ExprTypU es t))
-  => Treeable (ExprTypU (e:es) t) where
-  toTree (ExprTypUF x ) = toTree x
-  toTree (ExprTypUN xs) = toTree xs
-instance Pretty (ExprTypU '[] t) where
-  showPP x = case x of {}
-instance (Pretty (e t),Pretty (ExprTypU es t))
-  => Pretty (ExprTypU (e:es) t) where
-  showPP (ExprTypUF x ) = showPP x
-  showPP (ExprTypUN xs) = showPP xs
-instance (Parsable (e t)) => Parsable (ExprTypU '[e] t) where
-  parser = ExprTypUF <$> parser
-instance (Parsable (e t), Parsable (ExprTypU (e':es) t))
-  => Parsable (ExprTypU (e:e':es) t) where
-  parser = (ExprTypUF <$> parser) <|> (ExprTypUN <$> parser)
-instance (Treeable (ExprTypU es t), Pretty (ExprTypU es t), Parsable (ExprTypU es t))
-  => IsSyntax (ExprTypU es t)
+class (forall e n. (IsExpr e, IsExpr n) => IsExpr (f e n)) => IsExprT f
 
-data ExprTypTDo es b c t where
-  ExprTypTDoB ::b t -> ExprTypTDo '[] b c t
-  ExprTypTDoF ::e c (ExprTypTDo (e:es) b c) t -> ExprTypTDo (e:es) b c t
-  ExprTypTDoN ::ExprTypTDo es b c t -> ExprTypTDo (e:es) b c t
+class (forall e t. (IsType t, IsExpr e) => IsSyntax (s e t)) => IsStat s
 
-instance Treeable (b t) => Treeable (ExprTypTDo '[] b c t) where
-  toTree (ExprTypTDoB x) = toTree x
-instance (Treeable (e c (ExprTypTDo (e:es) b c) t), Treeable (ExprTypTDo es b c t))
-  => Treeable (ExprTypTDo (e:es) b c t) where
-  toTree (ExprTypTDoF x) = toTree x
-  toTree (ExprTypTDoN x) = toTree x
-instance Pretty (b t) => Pretty (ExprTypTDo '[] b c t) where
-  showPP (ExprTypTDoB x) = showPP x
-instance (Pretty (e c (ExprTypTDo (e:es) b c) t), Pretty (ExprTypTDo es b c t))
-  => Pretty (ExprTypTDo (e:es) b c t) where
-  showPP (ExprTypTDoF x) = showPP x
-  showPP (ExprTypTDoN x) = showPP x
-instance Parsable (b t) => Parsable (ExprTypTDo '[] b c t) where
-  parser = ExprTypTDoB <$> parser
-instance (Treeable (ExprTypTDo es b c t), Pretty (ExprTypTDo es b c t), Parsable (ExprTypTDo es b c t))
-  => IsSyntax (ExprTypTDo es b c t)
+class (forall z. (IsStat z) => IsStat (s z)) => IsStatT s
 
-newtype ExprTypFix (e :: (* -> *) -> * -> *) t
-  = ExprTypFix (e (ExprTypFix e) t)
+data ExprEither e1 e2 t = ExprLeft (e1 t) | ExprRight (e2 t)
 
-deriving instance Treeable (e (ExprTypFix e) t)
-  => Treeable (ExprTypFix e t)
-deriving instance Pretty (e (ExprTypFix e) t)
-  => Pretty (ExprTypFix e t)
-deriving instance Parsable (e (ExprTypFix e) t)
-  => Parsable (ExprTypFix e t)
-deriving instance IsSyntax (e (ExprTypFix e) t)
-  => IsSyntax (ExprTypFix e t)
+instance (Treeable (e1 t), Treeable (e2 t)) => Treeable (ExprEither e1 e2 t) where
+  toTree (ExprLeft  x) = toTree x
+  toTree (ExprRight x) = toTree x
+instance (Pretty (e1 t), Pretty (e2 t)) => Pretty (ExprEither e1 e2 t) where
+  showPP (ExprLeft  x) = showPP x
+  showPP (ExprRight x) = showPP x
+instance (Parsable (e1 t), Parsable (e2 t)) => Parsable (ExprEither e1 e2 t) where
+  parser = ExprLeft <$> parser <|> ExprRight <$> parser
+instance (IsSyntax (e1 t), IsSyntax (e2 t)) => IsSyntax (ExprEither e1 e2 t)
+instance (IsExpr e1, IsExpr e2) => IsExpr (ExprEither e1 e2)
 
-data StatTypU l e t where
-  StatTypUF ::z e t -> StatTypU (z:zs) e t
-  StatTypUN ::StatTypU zs e t -> StatTypU (z:zs) e t
+type family ExprUnion es where
+  ExprUnion '[e] = e
+  ExprUnion (e:es) = ExprEither e (ExprUnion es)
 
-instance Treeable (StatTypU '[] e t) where
-  toTree x = case x of {}
-instance (Treeable (z e t),Treeable (StatTypU zs e t))
-  => Treeable (StatTypU (z:zs) e t) where
-  toTree (StatTypUF x ) = toTree x
-  toTree (StatTypUN xs) = toTree xs
-instance Pretty (StatTypU '[] e t) where
-  showPP x = case x of {}
-instance (Pretty (z e t),Pretty (StatTypU zs e t))
-  => Pretty (StatTypU (z:zs) e t) where
-  showPP (StatTypUF x ) = showPP x
-  showPP (StatTypUN xs) = showPP xs
-instance (Parsable (z e t)) => Parsable (StatTypU '[z] e t) where
-  parser = StatTypUF <$> parser
-instance (Parsable (z e t), Parsable (StatTypU (z':zs) e t))
-  => Parsable (StatTypU (z:z':zs) e t) where
-  parser = (StatTypUF <$> parser) <|> (StatTypUN <$> parser)
-instance (Treeable (StatTypU zs e t), Pretty (StatTypU zs e t), Parsable (StatTypU zs e t))
-  => IsSyntax (StatTypU zs e t)
+data ExprTFree f e n t = ExprTFree (f e (ExprTFree f e n) t) | ExprTPure (n t)
 
-data StatTypTU l s e t where
-  StatTypTUF ::z s e t -> StatTypTU (z:zs) s e t
-  StatTypTUN ::StatTypTU zs s e t -> StatTypTU (z:zs) s e t
+instance (Treeable (f e (ExprTFree f e n) t), Treeable (n t)) => Treeable (ExprTFree f e n t) where
+  toTree (ExprTFree x) = toTree x
+  toTree (ExprTPure x) = toTree x
+instance (Pretty (f e (ExprTFree f e n) t), Pretty (n t)) => Pretty (ExprTFree f e n t) where
+  showPP (ExprTFree x) = showPP x
+  showPP (ExprTPure x) = showPP x
+instance (Treeable (ExprTFree f e n t), Pretty (ExprTFree f e n t), Parsable (ExprTFree f e n t)) => IsSyntax (ExprTFree f e n t)
+instance (forall t. IsType t => IsSyntax (ExprTFree f e n t)) => IsExpr (ExprTFree f e n)
+instance (forall e n. (IsExpr e, IsExpr n) => IsExpr (ExprTFree f e n)) => IsExprT (ExprTFree f)
 
-instance Treeable (StatTypTU '[] s e t) where
-  toTree x = case x of {}
-instance (Treeable (z s e t),Treeable (StatTypTU zs s e t))
-  => Treeable (StatTypTU (z:zs) s e t) where
-  toTree (StatTypTUF x ) = toTree x
-  toTree (StatTypTUN xs) = toTree xs
-instance Pretty (StatTypTU '[] s e t) where
-  showPP x = case x of {}
-instance (Pretty (z s e t),Pretty (StatTypTU zs s e t))
-  => Pretty (StatTypTU (z:zs) s e t) where
-  showPP (StatTypTUF x ) = showPP x
-  showPP (StatTypTUN xs) = showPP xs
-instance (Parsable (z s e t)) => Parsable (StatTypTU '[z] s e t) where
-  parser = StatTypTUF <$> parser
-instance (Parsable (z s e t), Parsable (StatTypTU (z':zs) s e t))
-  => Parsable (StatTypTU (z:z':zs) s e t) where
-  parser = (StatTypTUF <$> parser) <|> (StatTypTUN <$> parser)
-instance (Treeable (StatTypTU zs s e t), Pretty (StatTypTU zs s e t), Parsable (StatTypTU zs s e t))
-  => IsSyntax (StatTypTU zs s e t)
+type family ExprTDo' fs e n where
+  ExprTDo' '[f] e n = ExprTFree f e n
+  ExprTDo' (f:fs) e n = ExprTFree f e (ExprTDo' fs e n)
 
-newtype StatTypFix (s :: * -> (* -> *) -> * -> *) (e :: * -> *) t
-  = StatTypFix (s (StatTypFix s e t) e t)
+newtype ExprTDo fs e t = ExprTDo (ExprTDo' fs (ExprTDo fs e) e t)
 
-deriving instance Treeable (s (StatTypFix s e t) e t)
-  => Treeable (StatTypFix s e t)
-deriving instance Pretty (s (StatTypFix s e t) e t)
-  => Pretty (StatTypFix s e t)
-deriving instance Parsable (s (StatTypFix s e t) e t)
-  => Parsable (StatTypFix s e t)
-deriving instance IsSyntax (s (StatTypFix s e t) e t)
-  => IsSyntax (StatTypFix s e t)
+instance Treeable (ExprTDo' fs (ExprTDo fs e) e t) => Treeable (ExprTDo fs e t) where
+  toTree (ExprTDo x) = toTree x
+instance Pretty (ExprTDo' fs (ExprTDo fs e) e t) => Pretty (ExprTDo fs e t) where
+  showPP (ExprTDo x) = showPP x
+instance Parsable (ExprTDo' fs (ExprTDo fs e) e t) => Parsable (ExprTDo fs e t) where
+  parser = ExprTDo <$> parser
+instance IsSyntax (ExprTDo' fs (ExprTDo fs e) e t) => IsSyntax (ExprTDo fs e t)
+instance (forall t. IsType t => IsSyntax (ExprTDo fs e t)) => IsExpr (ExprTDo fs e)
 
-newtype ConstStatTypT z s e t = ConstStatTypT (z e t)
-  deriving (Treeable, Pretty, Parsable, IsSyntax)
+data StatTEither z1 z2 s e t = StatTLeft (z1 s e t) | StatTRight (z2 s e t)
+
+instance (Treeable (z1 s e t), Treeable (z2 s e t)) => Treeable (StatTEither z1 z2 s e t) where
+  toTree (StatTLeft  x) = toTree x
+  toTree (StatTRight x) = toTree x
+instance (Pretty (z1 s e t), Pretty (z2 s e t)) => Pretty (StatTEither z1 z2 s e t) where
+  showPP (StatTLeft  x) = showPP x
+  showPP (StatTRight x) = showPP x
+instance (Parsable (z1 s e t), Parsable (z2 s e t)) => Parsable (StatTEither z1 z2 s e t) where
+  parser = StatTLeft <$> parser <|> StatTRight <$> parser
+instance (IsSyntax (z1 s e t), IsSyntax (z2 s e t)) => IsSyntax (StatTEither z1 z2 s e t)
+instance (IsStat (z1 s), IsStat (z2 s)) => IsStat (StatTEither z1 z2 s)
+instance (IsStatT z1, IsStatT z2) => IsStatT (StatTEither z1 z2)
+
+type family StatTUnion' zs where
+  StatTUnion' '[z] = z
+  StatTUnion' (z:zs) = StatTEither z (StatTUnion' zs)
+
+newtype StatTUnion zs e t = StatTUnion (StatTUnion' zs (StatTUnion zs) e t)
+
+instance Treeable (StatTUnion' zs (StatTUnion zs) e t) => Treeable (StatTUnion zs e t) where
+  toTree (StatTUnion x) = toTree x
+instance Pretty (StatTUnion' zs (StatTUnion zs) e t) => Pretty (StatTUnion zs e t) where
+  showPP (StatTUnion x) = showPP x
+instance Parsable (StatTUnion' zs (StatTUnion zs) e t) => Parsable (StatTUnion zs e t) where
+  parser = StatTUnion <$> parser
+instance IsSyntax (StatTUnion' zs (StatTUnion zs) e t) => IsSyntax (StatTUnion zs e t)
+instance (forall e t. (IsType t, IsExpr e) => IsSyntax (StatTUnion zs e t)) => IsStat (StatTUnion zs)

@@ -18,13 +18,12 @@ import           GL.SyntaxTree
 import           GL.Token
 import           Text.Megaparsec               as P
 
-type Statements = '[SNoOp, SExpr]
-type StatementsT = '[SIf, ConstStatTypT (StatTypU Statements)]
+type Statements = '[SIf, SWhile, SFor, SBraces, SNoOp, SExpr]
 type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char]
 type ExpressionsT = '[EAdd, EMul, EVar, EParens]
 
-type DefaultExpr = ExprTypFix (ExprTypTDo ExpressionsT (ExprTypU Expressions))
-type DefaultStat = StatTypFix (StatTypTU StatementsT) DefaultExpr
+type DefaultExpr = ExprTDo ExpressionsT (ExprUnion Expressions)
+type DefaultStat = StatTUnion Statements DefaultExpr
 type UntypedAST = AST (FunTyp FunSigTyp DefaultStat (PartType Integer))
 
 --
