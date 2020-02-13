@@ -52,39 +52,25 @@ instance IsExprT EVar
 data EAdd (e :: * -> *) n t = EAdd (n t) (n t) | ESub (n t) (n t)
   deriving Pretty via (PrettyTree (EAdd e n t))
 instance (Parsable (n t)) => Parsable (EAdd e n t) where
-  parser = do
-    e1 <- parser
-    op <- (kw "+" $> EAdd) <|> (kw "-" $> ESub)
-    op e1 <$> parser
+  parser = operatorParserSingle ((kw "+" $> EAdd) <|> (kw "-" $> ESub))
 instance (Treeable (n t)) => Treeable (EAdd e n t) where
   toTree (EAdd a b) = listToTree "add" [a, b]
   toTree (ESub a b) = listToTree "sub" [a, b]
 instance (IsSyntax (n t)) => IsSyntax (EAdd e n t)
 instance Parsable (n t) => Parsable (ExprTFree EAdd e n t) where
-  parser = do
-    e  <- parser
-    ds <- many
-      (((kw "+" $> EAdd) <|> (kw "-" $> ESub)) <&> fmap ExprTPure parser)
-    return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
+  parser = operatorParser ((kw "+" $> EAdd) <|> (kw "-" $> ESub))
 instance IsExpr n => IsExpr (EAdd e n)
 instance IsExprT EAdd
 
 data EMul (e :: * -> *) n t = EMul (n t) (n t) | EDiv (n t) (n t)
   deriving Pretty via (PrettyTree (EMul e n t))
 instance (Parsable (n t)) => Parsable (EMul e n t) where
-  parser = do
-    e1 <- parser
-    op <- (kw "*" $> EMul) <|> (kw "/" $> EDiv)
-    op e1 <$> parser
+  parser = operatorParserSingle ((kw "*" $> EMul) <|> (kw "/" $> EDiv))
 instance (Treeable (n t)) => Treeable (EMul e n t) where
   toTree (EMul a b) = listToTree "mul" [a, b]
   toTree (EDiv a b) = listToTree "div" [a, b]
 instance (IsSyntax (n t)) => IsSyntax (EMul e n t)
 instance Parsable (n t) => Parsable (ExprTFree EMul e n t) where
-  parser = do
-    e  <- parser
-    ds <- many
-      (((kw "*" $> EMul) <|> (kw "/" $> EDiv)) <&> fmap ExprTPure parser)
-    return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
+  parser = operatorParser ((kw "*" $> EMul) <|> (kw "/" $> EDiv))
 instance IsExpr n => IsExpr (EMul e n)
 instance IsExprT EMul

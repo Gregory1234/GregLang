@@ -10,6 +10,8 @@ where
 import           GL.Utils
 import           GL.Parser
 import           Text.Megaparsec                ( (<|>) )
+import           Control.Applicative
+import           Data.Bool
 
 class (Pretty t, forall a. Pretty a => Pretty (t,a), TypeParsable t) => IsType t
 
@@ -95,3 +97,21 @@ instance Parsable (StatTUnion' zs (StatTUnion zs) e t) => Parsable (StatTUnion z
   parser = StatTUnion <$> parser
 instance IsSyntax (StatTUnion' zs (StatTUnion zs) e t) => IsSyntax (StatTUnion zs e t)
 instance (forall e t. (IsType t, IsExpr e) => IsSyntax (StatTUnion zs e t)) => IsStat (StatTUnion zs)
+
+operatorParserSingle
+  :: Parsable (n t)
+  => (forall a b c . Parser (b c -> b c -> f a b c))
+  -> Parser (f e n t)
+operatorParserSingle p = do
+  e  <- parser
+  op <- p
+  op e <$> parser
+
+operatorParser
+  :: Parsable (n t)
+  => (forall a b c . Parser (b c -> b c -> f a b c))
+  -> Parser (ExprTFree f e n t)
+operatorParser p = do
+  e  <- parser
+  ds <- many (p <&> fmap ExprTPure parser)
+  return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
