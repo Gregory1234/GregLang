@@ -8,6 +8,7 @@ where
 import           GL.SyntaxTree
 import           GL.Parser
 import           GL.Utils
+import           GL.Ident
 import           Text.Megaparsec               as P
 
 sc :: Parser a -> Parser a
@@ -87,3 +88,13 @@ instance (Parsable (e t), Parsable (s e t)) => Parsable (SFor s e t) where
 instance (IsSyntax (e t), IsSyntax (s e t)) => IsSyntax (SFor s e t)
 instance IsStat s => IsStat (SFor s)
 instance IsStatT SFor
+
+data SLet s e t = SLet t Ident (e t)
+  deriving Pretty via (PrettyTree (SLet s e t))
+instance (Treeable (e t), IsType t) => Treeable (SLet s e t) where
+  toTree (SLet t n e) = Node ("let " ++ showPP (t, n) ++ " =") [toTree e]
+instance (Parsable (e t), IsType t) => Parsable (SLet s e t) where
+  parser = sc $ uncurry SLet <$> preKw "let" parserType <*> preKw "=" parser
+instance (IsSyntax (e t), IsType t) => IsSyntax (SLet s e t)
+instance IsStat (SLet s)
+instance IsStatT SLet

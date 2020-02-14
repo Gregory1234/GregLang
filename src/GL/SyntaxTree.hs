@@ -11,7 +11,6 @@ import           GL.Utils
 import           GL.Parser
 import           Text.Megaparsec                ( (<|>) )
 import           Control.Applicative
-import           Data.Bool
 
 class (Pretty t, forall a. Pretty a => Pretty (t,a), TypeParsable t) => IsType t
 
