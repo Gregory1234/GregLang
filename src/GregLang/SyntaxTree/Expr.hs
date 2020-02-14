@@ -35,7 +35,7 @@ instance Treeable (e t) => Treeable (EParens e n t) where
   toTree (EParens e) = listToTree "parens" [e]
 instance IsSyntax (e t) => IsSyntax (EParens e n t)
 instance (Parsable (e t), Parsable (n t)) => Parsable (ExprTFree EParens e n t) where
-  parser = ExprTFree . EParens <$> parens parser <|> ExprTPure <$> parser
+  parser = ExprTFree . EParens <$> try (parens parser) <|> ExprTPure <$> parser
 instance IsExpr e => IsExpr (EParens e n)
 instance IsExprT EParens
 

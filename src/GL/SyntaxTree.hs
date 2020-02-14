@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, QuantifiedConstraints, TypeOperators, DataKinds,
   PolyKinds, UndecidableInstances, GADTs, FlexibleInstances, EmptyCase,
-  GeneralizedNewtypeDeriving, StandaloneDeriving, TypeFamilies #-}
+  GeneralizedNewtypeDeriving, StandaloneDeriving, TypeFamilies, DerivingVia #-}
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree
@@ -114,3 +114,14 @@ operatorParser p = do
   e  <- parser
   ds <- many (p <&> fmap ExprTPure parser)
   return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
+
+data ExprTyped e t = ExprTyped t (e t)
+  deriving Pretty via (PrettyTree (ExprTyped e t))
+
+instance (Treeable (e t), IsType t) => Treeable (ExprTyped e t) where
+  toTree (ExprTyped t x) =
+    let (Node a b) = toTree x in Node (showPP (t, ClearString a)) b
+instance (Parsable (e t), IsType t) => Parsable (ExprTyped e t) where
+  parser = uncurry ExprTyped <$> parserTypeParens
+instance (IsSyntax (e t), IsType t) => IsSyntax (ExprTyped e t)
+instance IsExpr e => IsExpr (ExprTyped e)
