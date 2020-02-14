@@ -19,8 +19,8 @@ import           GL.Token
 import           Text.Megaparsec               as P
 
 type Statements = '[SIf, SWhile, SFor, SBraces, SNoOp, SExpr]
-type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char]
-type ExpressionsT = '[EAdd, EMul, EVar, EParens]
+type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
+type ExpressionsT = '[EAdd, EMul, EDot, EParens]
 
 type DefaultExpr = ExprTDo ExpressionsT (ExprUnion Expressions)
 type DefaultStat = StatTUnion Statements DefaultExpr
