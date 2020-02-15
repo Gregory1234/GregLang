@@ -51,18 +51,6 @@ traceN
   -> a
 traceN s a = trace (s ++ show a) a
 
--- | Like 'traceN' but using Pretty.
---
--- >>> traceP "msg " 12
--- msg 12
--- 12
-traceP
-  :: Pretty a
-  => String -- ^ the prepended message
-  -> a
-  -> a
-traceP s a = trace (s ++ showPP a) a
-
 -- | Conversion of values to 'Tree' of 'String's.
 class Treeable a where
   {-# MINIMAL toTree #-}
@@ -133,9 +121,6 @@ infixl 4 <&>
 enumerate :: (Bounded a, Enum a) => [a]
 enumerate = [minBound .. maxBound]
 
-lexElem :: (Pretty a, Pretty b, Lexable b) => [b] -> a -> Maybe b
-lexElem l a = toMaybe (showPP a `elem` map showPP l) (lexS $ showPP a)
-
 -- | Change a 'Maybe' into an 'Either'.
 maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither _ (Just x) = Right x
@@ -154,45 +139,6 @@ onlyEither x _   = Left x
 joinFun :: (Monad m) => m (a -> m b) -> a -> m b
 joinFun f a = ($ a) =<< f
 
--- | Conversion of values to formatted 'String's.
-class Pretty a where
-  -- | Convert a value to a formatted 'String's.
-  showPP :: a -> String
-  default showPP :: Show a => a -> String
-  showPP = show
-
-instance Pretty Char
-instance Pretty String
-instance Pretty Int
-instance Pretty Integer
-instance Pretty Float
-instance Pretty Double
-
--- | Newtype for pretty printing 'String's without quotes.
-newtype ClearString = ClearString {getClearString :: String}
-
-instance Pretty ClearString where
-  showPP = getClearString
-
--- | Newtype for pretty printing 'Treeable's.
-newtype PrettyTree t =
-  PrettyTree t
-  deriving Treeable
-
-instance Treeable t => Pretty (PrettyTree t) where
-  showPP = treePP
-
--- | 'print' for 'Pretty'.
-pprint :: Pretty a => a -> IO ()
-pprint = putStrLn . showPP
-
--- | 'showPP' for 'Foldable's of 'Pretty'.
-showPPList :: (Foldable f, Pretty a) => f a -> String
-showPPList = foldr helper "[]"
- where
-  helper a "[]"       = '[' : showPP a ++ "]"
-  helper a ('[' : xs) = '[' : showPP a ++ ',' : xs
-  helper _ _          = error "impossible"
 -- Parsing of 'String's, producing values.
 class Lexable a where
   -- | 'readPrec' for 'Lexable'
@@ -214,10 +160,6 @@ instance Lexable Float
 instance Lexable Double
 instance Lexable String
 instance Lexable Char
-
--- | A 'Prism'' for text formatting based on 'Lexable' and 'Pretty'.
-_Pretty :: (Lexable a, Pretty a) => Prism' String a
-_Pretty = prism showPP $ \s -> second fst $ headError s $ lexA s
 
 foldMapA :: (Applicative f, Monoid m, Foldable t) => (a -> f m) -> t a -> f m
 foldMapA f = foldr (liftA2 mappend . f) (pure mempty)

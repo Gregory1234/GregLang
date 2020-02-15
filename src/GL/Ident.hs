@@ -11,9 +11,8 @@ import           Text.Read               hiding ( Ident )
 import           Data.String
 
 newtype Ident =
-  Ident { identString :: String }
+  Ident { getIdent :: String }
   deriving newtype (Eq, Ord, IsString, Treeable, Show)
-  deriving Pretty via ClearString
 
 instance Lexable Ident where
   lexAP = Ident <$> lift
@@ -22,9 +21,8 @@ instance Lexable Ident where
     )
 
 newtype ClassName =
-  ClassName { classNameString :: String }
+  ClassName { getClassName :: String }
   deriving newtype (Eq, Ord, IsString, Treeable, Show)
-  deriving Pretty via ClearString
 
 
 instance Lexable ClassName where

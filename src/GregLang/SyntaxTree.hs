@@ -35,12 +35,12 @@ data AST ce = AST
   , astImports :: [Package]
   , astClasses :: [Class ce]
   , astAddons :: [ce]
-  } deriving Pretty via (PrettyTree (AST ce))
+  }
 
 instance Treeable e => Treeable (AST e) where
   toTree (AST p i c f) = Node
     "AST"
-    [ toTree $ "package " ++ showPP p
+    [ toTree $ "package " ++ treePP p
     , listToTree "imports" i
     , listToTree "classes" c
     , listToTree "funs"    f
@@ -64,10 +64,10 @@ instance IsSyntax e => IsSyntax (AST e) where
 data Class ce = Class
   { className :: ClassName
   , classElems :: [ce]
-  } deriving Pretty via (PrettyTree (Class ce))
+  }
 
 instance Treeable e => Treeable (Class e) where
-  toTree (Class n e) = listToTree ("class " ++ showPP n) e
+  toTree (Class n e) = listToTree ("class " ++ treePP n) e
 
 instance Parsable e => Parsable (Class e) where
   parser = Class <$> (kw "class" *> parser) <*> P.many parser
@@ -89,25 +89,23 @@ data FunSigTyp t = FunSigTyp
   , funTypArgs :: [(t,Ident)]
   }
 
-instance TypeParsable t => Parsable (Ident,FunSigTyp t) where
+instance IsType t => Parsable (Ident,FunSigTyp t) where
   parser = do
     (t, n) <- parserType
     a      <- maybeCommas parserType
     return (n, FunSigTyp t a)
 
-instance (Pretty (t, Ident), Treeable (stat t))
+instance (IsType t, Treeable (stat t))
   => Treeable (FunTyp FunSigTyp stat t) where
   toTree (FunTyp n (FunSigTyp t as) s) = Node
-    ("fun " ++ showPP (t, n))
-    (listToTree "args" (showPP <$> as) : toForest s)
-
-deriving via (PrettyTree (FunTyp FunSigTyp stat t))
-  instance (Pretty (t, Ident), Treeable (stat t))
-    => Pretty (FunTyp FunSigTyp stat t)
+    ("fun " ++ typeAnnotate t (getIdent n))
+    ( listToTree "args" (uncurry typeAnnotate . (fmap getIdent) <$> as)
+    : toForest s
+    )
 
 instance (Parsable (Ident,sig t),Parsable (stat t))
   => Parsable (FunTyp sig stat t) where
   parser = uncurry FunTyp <$> parser <*> safeBraces
 
-instance (Pretty (t, Ident), Treeable (stat t), Parsable (Ident,FunSigTyp t),
-  Parsable (stat t)) => IsSyntax (FunTyp FunSigTyp stat t) where
+instance (IsType t, Treeable (stat t), Parsable (Ident,FunSigTyp t), Parsable (stat t))
+  => IsSyntax (FunTyp FunSigTyp stat t) where

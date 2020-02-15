@@ -21,16 +21,11 @@ type Parser = P.ParsecT Void [LocToken] (State Integer)
 class Parsable a where
   parser :: Parser a
 
-class TypeParsable a where
-  parserType :: Parsable b => Parser (a,b)
-  parserTypeParens :: Parsable b => Parser (a,b)
-  parserNoType :: Parser a
-
 satisfyT :: (Token -> Maybe a) -> Parser a
-satisfyT f = fromJust . f . _tokenVal <$> P.satisfy (isJust . f . _tokenVal)
+satisfyT f = fromJust . f . tokenVal <$> P.satisfy (isJust . f . tokenVal)
 
 exactT :: Token -> Parser ()
-exactT t = P.label (showPP t) $ void $ P.satisfy ((== t) . _tokenVal)
+exactT t = P.label (tokenPretty t) $ void $ P.satisfy ((== t) . tokenVal)
 
 bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b

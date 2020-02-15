@@ -94,7 +94,7 @@ newtype TokenStream =
   deriving Show
 
 instance Show LocToken where
-  show = showPP
+  show = locTokenPretty
 
 arbitrarySpelling = return . spellToken
 

@@ -15,22 +15,17 @@ import           Data.List
 
 data Type = Type Package ClassName
 
-instance Pretty Type where
-  showPP (Type p c) = showPP p ++ '.' : classNameString c
+instance Treeable Type where
+  toTree (Type p c) = toTree $ treePP p ++ '.' : getClassName c
 
 data PartType n = FullType Type | NameType ClassName | NoType n
 
-instance (Pretty n) => Pretty (PartType n) where
-  showPP (FullType t) = showPP t
-  showPP (NameType c) = showPP c
-  showPP (NoType   x) = showPP x
+instance Treeable n => Treeable (PartType n) where
+  toTree (FullType t) = toTree t
+  toTree (NameType c) = toTree c
+  toTree (NoType   x) = toTree x
 
-instance (Pretty n, Pretty a) => Pretty (PartType n, a) where
-  showPP (FullType t, n) = showPP n ++ " : " ++ showPP t
-  showPP (NameType c, n) = showPP n ++ " : " ++ showPP c
-  showPP (NoType   x, n) = showPP n ++ " : " ++ showPP x
-
-instance TypeParsable (PartType Integer) where
+instance IsType (PartType Integer) where
   parserType = do
     a <- optional parser
     i <- parser
@@ -42,17 +37,15 @@ instance TypeParsable (PartType Integer) where
     t <- maybe (NoType <$> inc) (return . NameType) a
     return (t, i)
   parserNoType = NoType <$> inc
+  typeAnnotate (FullType t) n = n ++ " : " ++ treePP t
+  typeAnnotate (NameType c) n = n ++ " : " ++ treePP c
+  typeAnnotate (NoType   x) n = n ++ " : " ++ show x
 
 newtype Package = Package [Ident]
   deriving IsList
 
-instance Pretty Package where
-  showPP (Package s) = intercalate "." (identString <$> s)
-
 instance Treeable Package where
-  toTree = toTree . showPP
+  toTree (Package s) = toTree $ intercalate "." (getIdent <$> s)
 
 instance Parsable Package where
   parser = Package <$> P.sepBy (parser @Ident) (kw ".")
-
-instance IsType (PartType Integer)

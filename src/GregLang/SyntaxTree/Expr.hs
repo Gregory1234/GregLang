@@ -13,22 +13,19 @@ import           Text.Megaparsec
 
 newtype ELit l t = ELit l
   deriving Parsable
-  deriving Pretty via (PrettyTree (ELit l t))
-instance Pretty l => Treeable (ELit l t) where
-  toTree (ELit l) = toTree ("lit " ++ showPP l)
-instance (Pretty l, Parsable l) => IsSyntax (ELit l t)
-instance (Pretty l, Parsable l) => IsExpr (ELit l)
+instance Show l => Treeable (ELit l t) where
+  toTree (ELit l) = toTree ("lit " ++ show l)
+instance (Show l, Parsable l) => IsSyntax (ELit l t)
+instance (Show l, Parsable l) => IsExpr (ELit l)
 
 newtype EVar t = EVar Ident
   deriving Parsable
-  deriving Pretty via (PrettyTree (EVar t))
 instance Treeable (EVar t) where
-  toTree (EVar n) = toTree ("var " ++ showPP n)
+  toTree (EVar n) = toTree ("var " ++ getIdent n)
 instance IsSyntax (EVar t)
 instance IsExpr EVar
 
 newtype EParens e (n :: * -> *) t = EParens (e t)
-  deriving Pretty via (PrettyTree (EParens e n t))
 instance Parsable (e t) => Parsable (EParens e n t) where
   parser = EParens <$> parens parser
 instance Treeable (e t) => Treeable (EParens e n t) where
@@ -40,7 +37,6 @@ instance IsExpr e => IsExpr (EParens e n)
 instance IsExprT EParens
 
 data EDot e n t = EDot (n t) Ident [e t]
-  deriving Pretty via (PrettyTree (EDot e n t))
 instance (Parsable (n t), Parsable (e t)) => Parsable (EDot e n t) where
   parser = EDot <$> parser <* kw "." <*> parser <*> optionL
     (parens (maybeCommas parser))
@@ -57,7 +53,6 @@ instance (IsExpr e, IsExpr n) => IsExpr (EDot e n)
 instance IsExprT EDot
 
 data EAdd (e :: * -> *) n t = EAdd (n t) (n t) | ESub (n t) (n t)
-  deriving Pretty via (PrettyTree (EAdd e n t))
 instance (Parsable (n t)) => Parsable (EAdd e n t) where
   parser = operatorParserSingle ((kw "+" $> EAdd) <|> (kw "-" $> ESub))
 instance (Treeable (n t)) => Treeable (EAdd e n t) where
@@ -70,7 +65,6 @@ instance IsExpr n => IsExpr (EAdd e n)
 instance IsExprT EAdd
 
 data EMul (e :: * -> *) n t = EMul (n t) (n t) | EDiv (n t) (n t)
-  deriving Pretty via (PrettyTree (EMul e n t))
 instance (Parsable (n t)) => Parsable (EMul e n t) where
   parser = operatorParserSingle ((kw "*" $> EMul) <|> (kw "/" $> EDiv))
 instance (Treeable (n t)) => Treeable (EMul e n t) where

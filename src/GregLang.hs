@@ -9,6 +9,7 @@ import           GL.Args
 import           GL.Lexer
 import           GL.Utils
 import           GL.SyntaxTree
+import           GL.Token
 import           Control.Monad.Except
 import           GL.Parser
 import           Data.Proxy
@@ -19,6 +20,6 @@ defaultMain (Proxy :: Proxy a) = do
   fileContent <- readFile inputFileArg
   (either putStrLn pure =<<) . runExceptT $ do
     tok <- liftEither $ lexGregLang inputFileArg fileContent
-    lift $ pprint tok
+    lift . putStrLn . unlines . map locTokenPretty $ tok
     (ast :: a) <- liftEither $ parseGregLang inputFileArg tok
-    lift $ pprint ast
+    lift . putStrLn . treePP $ ast

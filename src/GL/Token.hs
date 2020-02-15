@@ -32,9 +32,8 @@ updatePosString p ('\n' : xs) = updatePosString
 updatePosString p (_ : xs) =
   updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
 
-newtype Keyword = Keyword { unKeyword :: String }
+newtype Keyword = Keyword { getKeyword :: String }
   deriving newtype (Eq, Ord, IsString)
-  deriving Pretty via ClearString
 
 keywords :: [String]
 keywords = concat
@@ -53,7 +52,7 @@ instance Lexable Keyword where
 
 instance Enum Keyword where
   toEnum   = Keyword . (keywords !!)
-  fromEnum = fromJust . (`elemIndex` keywords) . unKeyword
+  fromEnum = fromJust . (`elemIndex` keywords) . getKeyword
 
 instance Bounded Keyword where
   minBound = Keyword (head keywords)
@@ -72,23 +71,23 @@ data Token
 
 spellToken :: Token -> String
 spellToken TBegin         = ""
-spellToken (TIdent     x) = showPP x
-spellToken (TTypeIdent x) = showPP x
-spellToken (TStringLit x) = showPP x
-spellToken (TIntLit    x) = showPP x
-spellToken (TFloatLit  x) = showPP x
-spellToken (TCharLit   x) = showPP x
-spellToken (TKeyword   x) = showPP x
+spellToken (TIdent     x) = getIdent x
+spellToken (TTypeIdent x) = getClassName x
+spellToken (TStringLit x) = show x
+spellToken (TIntLit    x) = show x
+spellToken (TFloatLit  x) = show x
+spellToken (TCharLit   x) = show x
+spellToken (TKeyword   x) = getKeyword x
 
-instance Pretty Token where
-  showPP TBegin         = "<begin>"
-  showPP (TIdent     s) = "<ident " ++ showPP s ++ ">"
-  showPP (TTypeIdent s) = "<type ident " ++ showPP s ++ ">"
-  showPP (TStringLit s) = "<string " ++ showPP s ++ ">"
-  showPP (TIntLit    s) = "<int " ++ showPP s ++ ">"
-  showPP (TFloatLit  s) = "<float " ++ showPP s ++ ">"
-  showPP (TCharLit   s) = "<char " ++ showPP s ++ ">"
-  showPP (TKeyword   s) = showPP (showPP s)
+tokenPretty :: Token -> String
+tokenPretty TBegin         = "<begin>"
+tokenPretty (TIdent     s) = "<ident " ++ getIdent s ++ ">"
+tokenPretty (TTypeIdent s) = "<type ident " ++ getClassName s ++ ">"
+tokenPretty (TStringLit s) = "<string " ++ show s ++ ">"
+tokenPretty (TIntLit    s) = "<int " ++ show s ++ ">"
+tokenPretty (TFloatLit  s) = "<float " ++ show s ++ ">"
+tokenPretty (TCharLit   s) = "<char " ++ show s ++ ">"
+tokenPretty (TKeyword   s) = show (getKeyword s)
 
 instance Lexable Token where
   lexAP = foldl1
@@ -97,7 +96,8 @@ instance Lexable Token where
       a <- lexAP
       b <- lift RP.look
       guard
-        (null b || not (isLetter $ head $ showPP a) || not (isAlphaNum $ head b)
+        (null b || not (isLetter $ head $ getKeyword a) || not
+          (isAlphaNum $ head b)
         )
       return $ TKeyword a
     , TStringLit <$> lexAP
@@ -112,23 +112,20 @@ makePrisms ''Token
 
 data LocToken =
   LocToken
-    { _tokenVal :: Token
-    , _tokenPos :: P.SourcePos
+    { tokenVal :: Token
+    , tokenPos :: P.SourcePos
     , tokenSpellingDuring :: String
     , tokenSpellingAfter :: String
     }
   deriving (Eq, Ord)
 
-instance Pretty LocToken where
-  showPP LocToken {..} =
-    showPP _tokenVal
-      ++ " at "
-      ++ P.sourcePosPretty _tokenPos
-      ++ " spelled "
-      ++ showPP (tokenSpellingDuring ++ tokenSpellingAfter)
-
-instance Pretty [LocToken] where
-  showPP = unlines . map showPP
+locTokenPretty :: LocToken -> String
+locTokenPretty LocToken {..} =
+  tokenPretty tokenVal
+    ++ " at "
+    ++ P.sourcePosPretty tokenPos
+    ++ " spelled "
+    ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
@@ -150,7 +147,8 @@ instance P.Stream [LocToken] where
              | null s    = Nothing
              | otherwise = Just (splitAt n s)
   takeWhile_ = span
-  showTokens Proxy = intercalate ", " . NE.toList . fmap (showPP . _tokenVal)
+  showTokens Proxy =
+    intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
   reachOffset o P.PosState {..} =
     ( epos
     , line
@@ -170,6 +168,3 @@ instance P.Stream [LocToken] where
       splitOn "\n" (pstateInput >>= recreateToken' (P.unPos pstateTabWidth))
     line = strs !! min (length strs - 1) ind
     ind  = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos
-
-
-makeLenses ''LocToken
