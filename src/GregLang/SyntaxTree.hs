@@ -20,7 +20,8 @@ import           Text.Megaparsec               as P
 
 type Statements = '[SIf, SWhile, SFor, SLet, SBraces, SNoOp, SExpr]
 type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
-type ExpressionsT = '[EAdd, EMul, EDot, EParens]
+type ExpressionsT
+  = '[EBOr, EBXor, EBAnd, EOr, EXor, EAnd, EEq, EComp, EAdd, EMul, EPre, EDot, EParens]
 
 type DefaultExpr = ExprTDo ExpressionsT (ExprTyped (ExprUnion Expressions))
 type DefaultStat = StatTUnion Statements DefaultExpr

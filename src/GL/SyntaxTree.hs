@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes, QuantifiedConstraints, TypeOperators, DataKinds,
-  PolyKinds, UndecidableInstances, GADTs, FlexibleInstances, EmptyCase,
-  GeneralizedNewtypeDeriving, StandaloneDeriving, TypeFamilies, DerivingVia #-}
+  PolyKinds, UndecidableInstances, GADTs, FlexibleInstances, TypeApplications,
+  TypeFamilies, ScopedTypeVariables #-}
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree
@@ -11,6 +11,9 @@ import           GL.Utils
 import           GL.Parser
 import           Text.Megaparsec                ( (<|>) )
 import           Control.Applicative
+import           GHC.TypeLits
+import           Data.Proxy
+import           GL.Token
 
 class IsType t where
   parserType :: Parsable a => Parser (t,a)
@@ -94,24 +97,6 @@ instance Parsable (StatTUnion' zs (StatTUnion zs) e t) => Parsable (StatTUnion z
 instance IsSyntax (StatTUnion' zs (StatTUnion zs) e t) => IsSyntax (StatTUnion zs e t)
 instance (forall e t. (IsType t, IsExpr e) => IsSyntax (StatTUnion zs e t)) => IsStat (StatTUnion zs)
 
-operatorParserSingle
-  :: Parsable (n t)
-  => (forall a b c . Parser (b c -> b c -> f a b c))
-  -> Parser (f e n t)
-operatorParserSingle p = do
-  e  <- parser
-  op <- p
-  op e <$> parser
-
-operatorParser
-  :: Parsable (n t)
-  => (forall a b c . Parser (b c -> b c -> f a b c))
-  -> Parser (ExprTFree f e n t)
-operatorParser p = do
-  e  <- parser
-  ds <- many (p <&> fmap ExprTPure parser)
-  return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
-
 data ExprTyped e t = ExprTyped t (e t)
 
 instance (Treeable (e t), IsType t) => Treeable (ExprTyped e t) where
@@ -121,3 +106,40 @@ instance (Parsable (e t), IsType t) => Parsable (ExprTyped e t) where
   parser = uncurry ExprTyped <$> parserTypeParens
 instance (IsSyntax (e t), IsType t) => IsSyntax (ExprTyped e t)
 instance IsExpr e => IsExpr (ExprTyped e)
+
+data EOp' (op :: [(Symbol, Symbol)]) where
+  EOpF ::EOp' (o:os)
+  EOpN ::EOp' os -> EOp' (o:os)
+
+data EOp op (e :: * -> *) n t = EOp (n t) (EOp' op) (n t)
+
+class KnownOps os where
+  parserOp :: Parser (EOp' os)
+  nameOp :: EOp' os -> String
+
+instance (KnownSymbol op, KnownSymbol on) => KnownOps '[ '(op, on)] where
+  parserOp = kw (Keyword . symbolVal $ Proxy @op) $> EOpF
+  nameOp _ = symbolVal $ Proxy @on
+instance (KnownSymbol op, KnownSymbol on, KnownOps (o:os)) => KnownOps ('(op, on):o:os) where
+  parserOp = kw (Keyword . symbolVal $ Proxy @op) $> EOpF <|> EOpN <$> parserOp
+  nameOp EOpF     = symbolVal $ Proxy @on
+  nameOp (EOpN e) = nameOp e
+
+parserOp' :: KnownOps os => Parser (n t -> n t -> EOp os e n t)
+parserOp' = parserOp >>= (\o -> pure $ \a b -> EOp a o b)
+
+instance (KnownOps os, Treeable (n t)) => Treeable (EOp os e n t) where
+  toTree (EOp e1 op e2) = listToTree (nameOp op) [e1, e2]
+instance (KnownOps os, Parsable (n t)) => Parsable (EOp os e n t) where
+  parser = do
+    e  <- parser
+    op <- parserOp'
+    op e <$> parser
+instance (KnownOps os, Parsable (n t), Treeable (n t)) => IsSyntax (EOp os e n t)
+instance (KnownOps os, Parsable (n t)) => Parsable (ExprTFree (EOp os) e n t) where
+  parser = do
+    e  <- parser
+    ds <- many (parserOp' <&> fmap ExprTPure parser)
+    return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
+instance (KnownOps os, IsExpr n) => IsExpr (EOp os e n)
+instance KnownOps os => IsExprT (EOp os)

@@ -52,26 +52,30 @@ instance (Parsable (e t), Parsable (n t)) => Parsable (ExprTFree EDot e n t) whe
 instance (IsExpr e, IsExpr n) => IsExpr (EDot e n)
 instance IsExprT EDot
 
-data EAdd (e :: * -> *) n t = EAdd (n t) (n t) | ESub (n t) (n t)
-instance (Parsable (n t)) => Parsable (EAdd e n t) where
-  parser = operatorParserSingle ((kw "+" $> EAdd) <|> (kw "-" $> ESub))
-instance (Treeable (n t)) => Treeable (EAdd e n t) where
-  toTree (EAdd a b) = listToTree "add" [a, b]
-  toTree (ESub a b) = listToTree "sub" [a, b]
-instance (IsSyntax (n t)) => IsSyntax (EAdd e n t)
-instance Parsable (n t) => Parsable (ExprTFree EAdd e n t) where
-  parser = operatorParser ((kw "+" $> EAdd) <|> (kw "-" $> ESub))
-instance IsExpr n => IsExpr (EAdd e n)
-instance IsExprT EAdd
+data EPre (e :: * -> *) n t = ENot (n t) | ENeg (n t)
+instance (Parsable (n t)) => Parsable (EPre e n t) where
+  parser = ((kw "!" $> ENot) <|> (kw "-" $> ENeg)) <*> parser
+instance (Treeable (n t)) => Treeable (EPre e n t) where
+  toTree (ENot a) = listToTree "not" [a]
+  toTree (ENeg a) = listToTree "negative" [a]
+instance (IsSyntax (n t)) => IsSyntax (EPre e n t)
+instance Parsable (n t) => Parsable (ExprTFree EPre e n t) where
+  parser =
+    ((kw "!" $> ExprTFree . ENot) <|> (kw "-" $> ExprTFree . ENeg) <|> pure id)
+      <*> (ExprTPure <$> parser)
+instance IsExpr n => IsExpr (EPre e n)
+instance IsExprT EPre
 
-data EMul (e :: * -> *) n t = EMul (n t) (n t) | EDiv (n t) (n t)
-instance (Parsable (n t)) => Parsable (EMul e n t) where
-  parser = operatorParserSingle ((kw "*" $> EMul) <|> (kw "/" $> EDiv))
-instance (Treeable (n t)) => Treeable (EMul e n t) where
-  toTree (EMul a b) = listToTree "mul" [a, b]
-  toTree (EDiv a b) = listToTree "div" [a, b]
-instance (IsSyntax (n t)) => IsSyntax (EMul e n t)
-instance Parsable (n t) => Parsable (ExprTFree EMul e n t) where
-  parser = operatorParser ((kw "*" $> EMul) <|> (kw "/" $> EDiv))
-instance IsExpr n => IsExpr (EMul e n)
-instance IsExprT EMul
+type EAdd = EOp '[('("+", "add")), '("-", "sub")]
+type EMul = EOp '[('("*", "mul")), '("/", "div"), '("%", "mod")]
+
+type EEq = EOp '[('("==", "eq")), '("!==", "neq")]
+type EComp = EOp '[('(">=", "ge")), '("<=", "le"), '(">", "gt"), '("<", "lt")]
+
+type EAnd = EOp '[('("&", "and"))]
+type EOr = EOp '[('("|", "or"))]
+type EXor = EOp '[('("^", "xor"))]
+
+type EBAnd = EOp '[('("&&", "bin and"))]
+type EBOr = EOp '[('("||", "bin or"))]
+type EBXor = EOp '[('("^^", "bin xor"))]
