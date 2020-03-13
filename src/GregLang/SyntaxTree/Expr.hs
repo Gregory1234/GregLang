@@ -66,6 +66,25 @@ instance Parsable (n t) => Parsable (ExprTFree EPre e n t) where
 instance IsExpr n => IsExpr (EPre e n)
 instance IsExprT EPre
 
+data EIf e n t = EIf (n t) (e t) (n t)
+instance (Parsable (e t), Parsable (n t)) => Parsable (EIf e n t) where
+  parser = EIf <$> parser <*> preKw "?" parser <*> preKw ":" parser
+instance (Treeable (e t), Treeable (n t)) => Treeable (EIf e n t) where
+  toTree (EIf e1 e2 e3) =
+    Node "if" [toTree e1, listToTree "then" [e2], listToTree "else" [e3]]
+instance (IsSyntax (e t), IsSyntax (n t)) => IsSyntax (EIf e n t)
+instance (Parsable (e t), Parsable (n t)) => Parsable (ExprTFree EIf e n t) where
+  parser = do
+    e1 <- ExprTPure <$> parser
+    (do
+        e2 <- preKw "?" parser
+        e3 <- preKw ":" parser
+        return . ExprTFree $ EIf e1 e2 e3
+      )
+      <|> return e1
+instance (IsExpr e, IsExpr n) => IsExpr (EIf e n)
+instance IsExprT EIf
+
 type EAdd = EOp '[('("+", "add")), '("-", "sub")]
 type EMul = EOp '[('("*", "mul")), '("/", "div"), '("%", "mod")]
 
