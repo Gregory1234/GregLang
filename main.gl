@@ -1,5 +1,8 @@
 package main
 
 main{
-  let x = 26|(-5+6)
+  let x = 1
+  x += 6
+  x=7
+  x
 }

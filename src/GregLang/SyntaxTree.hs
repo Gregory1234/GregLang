@@ -18,7 +18,9 @@ import           GL.SyntaxTree
 import           GL.Token
 import           Text.Megaparsec               as P
 
-type Statements = '[SIf, SWhile, SFor, SLet, SBraces, SNoOp, SExpr]
+type SetOps
+  = '[('("+", "add")), '("-", "sub"), '("*", "mul"), '("/", "div"), '("%", "mod"), '("&", "and"), '("|", "or"), '("^", "xor"), '("&&", "bin and"), '("||", "bin or"), '("^^", "bin xor")]
+type Statements = '[SIf, SWhile, SFor, SLet, SBraces, SNoOp, SSet SetOps, SExpr]
 type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
 type ExpressionsT
   = '[EIf, EBOr, EBXor, EBAnd, EOr, EXor, EAnd, EEq, EComp, EAdd, EMul, EPre, EDot, EParens]

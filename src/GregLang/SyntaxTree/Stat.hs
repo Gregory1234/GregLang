@@ -85,10 +85,20 @@ instance IsStatT SFor
 
 data SLet s e t = SLet t Ident (e t)
 instance (Treeable (e t), IsType t) => Treeable (SLet s e t) where
-  toTree (SLet t n e) =
-    Node ("let " ++ typeAnnotate t (getIdent n) ++ " =") [toTree e]
+  toTree (SLet t n e) = Node ("let " ++ typeAnnotate t (getIdent n)) [toTree e]
 instance (Parsable (e t), IsType t) => Parsable (SLet s e t) where
   parser = sc $ uncurry SLet <$> preKw "let" parserType <*> preKw "=" parser
 instance (IsSyntax (e t), IsType t) => IsSyntax (SLet s e t)
 instance IsStat (SLet s)
 instance IsStatT SLet
+
+data SSet op s e t = SSet Ident (Maybe (Ops op)) (e t)
+instance (KnownOps op, Treeable (e t)) => Treeable (SSet op s e t) where
+  toTree (SSet n op e) =
+    Node (getIdent n ++ maybe "" ((' ' :) . nameOp) op ++ " set") [toTree e]
+instance (KnownOps op, Parsable (e t)) => Parsable (SSet op s e t) where
+  parser = sc $ P.try (SSet <$> parser <*> opParser) <*> parser
+    where opParser = Just <$> parserOpF (++ "=") <|> kw "=" $> Nothing
+instance (KnownOps op, IsSyntax (e t)) => IsSyntax (SSet op s e t)
+instance KnownOps op => IsStat (SSet op s)
+instance KnownOps op => IsStatT (SSet op)

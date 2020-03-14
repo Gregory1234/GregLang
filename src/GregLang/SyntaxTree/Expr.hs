@@ -9,7 +9,7 @@ import           GL.SyntaxTree
 import           GL.Parser
 import           GL.Utils
 import           GL.Ident
-import           Text.Megaparsec
+import           Text.Megaparsec               as P
 
 newtype ELit l t = ELit l
   deriving Parsable
@@ -84,6 +84,27 @@ instance (Parsable (e t), Parsable (n t)) => Parsable (ExprTFree EIf e n t) wher
       <|> return e1
 instance (IsExpr e, IsExpr n) => IsExpr (EIf e n)
 instance IsExprT EIf
+
+data EOp op (e :: * -> *) n t = EOp (n t) (Ops op) (n t)
+
+parserOp' :: KnownOps os => Parser (n t -> n t -> EOp os e n t)
+parserOp' = parserOp >>= (\o -> pure $ \a b -> EOp a o b)
+
+instance (KnownOps os, Treeable (n t)) => Treeable (EOp os e n t) where
+  toTree (EOp e1 op e2) = listToTree (nameOp op) [e1, e2]
+instance (KnownOps os, Parsable (n t)) => Parsable (EOp os e n t) where
+  parser = do
+    e  <- parser
+    op <- parserOp'
+    op e <$> parser
+instance (KnownOps os, Parsable (n t), Treeable (n t)) => IsSyntax (EOp os e n t)
+instance (KnownOps os, Parsable (n t)) => Parsable (ExprTFree (EOp os) e n t) where
+  parser = do
+    e  <- parser
+    ds <- many (parserOp' <&> fmap ExprTPure parser)
+    return (foldl (\a (f, b) -> ExprTFree (f a b)) (ExprTPure e) ds)
+instance (KnownOps os, IsExpr n) => IsExpr (EOp os e n)
+instance KnownOps os => IsExprT (EOp os)
 
 type EAdd = EOp '[('("+", "add")), '("-", "sub")]
 type EMul = EOp '[('("*", "mul")), '("/", "div"), '("%", "mod")]
