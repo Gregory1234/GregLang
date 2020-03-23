@@ -6,6 +6,7 @@ module GregLang.SyntaxTree.Stat
 where
 
 import           GL.SyntaxTree
+import           GL.Type
 import           GL.Parser
 import           GL.Utils
 import           GL.Ident

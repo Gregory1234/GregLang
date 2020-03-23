@@ -15,6 +15,7 @@ import           GL.Ident
 import           GL.Utils
 import           GL.Parser
 import           GL.SyntaxTree
+import           GL.Type
 import           GL.Token
 import           Text.Megaparsec               as P
 

@@ -6,7 +6,7 @@ module GregLang.SyntaxTree.Type
 where
 
 import           GL.Ident
-import           GL.SyntaxTree
+import           GL.Type
 import           GL.Parser
 import           GL.Utils
 import           GHC.Exts
