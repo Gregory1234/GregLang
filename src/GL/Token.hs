@@ -150,8 +150,7 @@ instance P.Stream [LocToken] where
   showTokens Proxy =
     intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
   reachOffset o P.PosState {..} =
-    ( epos
-    , line
+    ( line
     , P.PosState { P.pstateInput      = rest
                  , P.pstateOffset     = max pstateOffset o
                  , P.pstateSourcePos  = epos

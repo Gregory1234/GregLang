@@ -9,7 +9,6 @@ where
 
 import           GL.Utils
 import           GL.Parser
-import           Text.Megaparsec                ( (<|>) )
 import           GHC.TypeLits
 import           Data.Proxy
 import           GL.Token
