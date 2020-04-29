@@ -106,16 +106,16 @@ instance (KnownOps os, Parsable (n t)) => Parsable (ExprTFree (EOp os) e n t) wh
 instance (KnownOps os, IsExpr n) => IsExpr (EOp os e n)
 instance KnownOps os => IsExprT (EOp os)
 
-type EAdd = EOp '[('("+", "add")), '("-", "sub")]
-type EMul = EOp '[('("*", "mul")), '("/", "div"), '("%", "mod")]
+type EAdd = EOp '[ '("+", "add"), '("-", "sub")]
+type EMul = EOp '[ '("*", "mul"), '("/", "div"), '("%", "mod")]
 
-type EEq = EOp '[('("==", "eq")), '("!==", "neq")]
-type EComp = EOp '[('(">=", "ge")), '("<=", "le"), '(">", "gt"), '("<", "lt")]
+type EEq = EOp '[ '("==", "eq"), '("!==", "neq")]
+type EComp = EOp '[ '(">=", "ge"), '("<=", "le"), '(">", "gt"), '("<", "lt")]
 
-type EAnd = EOp '[('("&", "and"))]
-type EOr = EOp '[('("|", "or"))]
-type EXor = EOp '[('("^", "xor"))]
+type EAnd = EOp '[ '("&", "and")]
+type EOr = EOp '[ '("|", "or")]
+type EXor = EOp '[ '("^", "xor")]
 
-type EBAnd = EOp '[('("&&", "bin and"))]
-type EBOr = EOp '[('("||", "bin or"))]
-type EBXor = EOp '[('("^^", "bin xor"))]
+type EBAnd = EOp '[ '("&&", "bin and")]
+type EBOr = EOp '[ '("||", "bin or")]
+type EBXor = EOp '[ '("^^", "bin xor")]

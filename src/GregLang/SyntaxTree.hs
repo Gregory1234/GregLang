@@ -1,5 +1,6 @@
-{-# LANGUAGE DerivingVia, StandaloneDeriving, DataKinds, FlexibleInstances,
-  FlexibleContexts, UndecidableInstances, OverloadedStrings #-}
+{-# LANGUAGE DerivingVia, DataKinds, FlexibleInstances, FlexibleContexts,
+  UndecidableInstances, OverloadedStrings #-}
+
 module GregLang.SyntaxTree
   ( module GregLang.SyntaxTree
   , module GregLang.SyntaxTree.Expr
@@ -20,7 +21,7 @@ import           GL.Token
 import           Text.Megaparsec               as P
 
 type SetOps
-  = '[('("+", "add")), '("-", "sub"), '("*", "mul"), '("/", "div"), '("%", "mod"), '("&", "and"), '("|", "or"), '("^", "xor"), '("&&", "bin and"), '("||", "bin or"), '("^^", "bin xor")]
+  = '[ '("+", "add"), '("-", "sub"), '("*", "mul"), '("/", "div"), '("%", "mod"), '("&", "and"), '("|", "or"), '("^", "xor"), '("&&", "bin and"), '("||", "bin or"), '("^^", "bin xor")]
 type Statements = '[SIf, SWhile, SFor, SLet, SBraces, SNoOp, SSet SetOps, SExpr]
 type Expressions = '[ELit Integer, ELit Double, ELit String, ELit Char, EVar]
 type ExpressionsT
@@ -103,7 +104,7 @@ instance (IsType t, Treeable (stat t))
   => Treeable (FunTyp FunSigTyp stat t) where
   toTree (FunTyp n (FunSigTyp t as) s) = Node
     ("fun " ++ typeAnnotate t (getIdent n))
-    ( listToTree "args" (uncurry typeAnnotate . (fmap getIdent) <$> as)
+    ( listToTree "args" (uncurry typeAnnotate . fmap getIdent <$> as)
     : toForest s
     )
 

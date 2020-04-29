@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances, DefaultSignatures,
-  GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances, DefaultSignatures #-}
+
 
 module GL.Utils
   ( module Data.Tree
