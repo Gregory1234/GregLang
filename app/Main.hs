@@ -1,8 +1,16 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards #-}
 module Main where
 
-import           GregLang.SyntaxTree
-import           GregLang
-import           Data.Proxy
+import           GL.Args
+import           GL.Lexer
+import           GL.Parser
+import           Control.Monad.Except
 
-main = defaultMain (Proxy @UntypedAST)
+main = do
+  Args {..}   <- getArgs
+  fileContent <- readFile inputFileArg
+  (either putStrLn pure =<<) . runExceptT $ do
+    tok <- liftEither $ lexGregLang inputFileArg fileContent
+    lift . putStrLn . unlines . map locTokenPretty $ tok
+    ast <- liftEither $ parseGregLang inputFileArg tok
+    lift . putStrLn . treePP $ ast
