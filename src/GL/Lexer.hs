@@ -2,6 +2,7 @@
 
 module GL.Lexer
   ( lexGregLang
+  , module GL.Token
   )
 where
 

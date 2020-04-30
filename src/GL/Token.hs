@@ -3,6 +3,7 @@
 
 module GL.Token
   ( module GL.Token
+  , module GL.Token.Keyword
   )
 where
 
@@ -18,8 +19,8 @@ import qualified Text.Megaparsec               as P
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
 import           GL.Ident
-import           Data.String
 import           Control.Lens
+import           GL.Token.Keyword
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
 updatePosString p []          = p
@@ -31,32 +32,6 @@ updatePosString p ('\n' : xs) = updatePosString
   xs
 updatePosString p (_ : xs) =
   updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
-
-newtype Keyword = Keyword { getKeyword :: String }
-  deriving newtype (Eq, Ord, IsString)
-
-keywords :: [String]
-keywords = concat
-  [ ["class", "package", "import", "if", "else", "while", "do"]
-  , ["for", "let", "return", "import", "break", "continue"]
-  , ["public", "private"]
-  , ["{", "}", "(", ")", "[", "]", ";", ".", ",", "?", ":"]
-  , ["==", "<=", ">=", "!=", "+=", "-=", "*=", "/=", "%="]
-  , ["&&=", "||=", "^^=", "&=", "|=", "^="]
-  , ["=", "<", ">", "!", "+", "-", "*", "/", "%"]
-  , ["&&", "||", "^^", "&", "|", "^"]
-  ]
-
-instance Lexable Keyword where
-  lexAP = Keyword <$> foldl1 (<++) (map (lift . RP.string) keywords)
-
-instance Enum Keyword where
-  toEnum   = Keyword . (keywords !!)
-  fromEnum = fromJust . (`elemIndex` keywords) . getKeyword
-
-instance Bounded Keyword where
-  minBound = Keyword (head keywords)
-  maxBound = Keyword (last keywords)
 
 data Token
   = TBegin
