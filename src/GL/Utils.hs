@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleInstances, DefaultSignatures #-}
-
+{-# LANGUAGE FlexibleInstances #-}
 
 module GL.Utils
   ( module Data.Tree
@@ -22,8 +21,6 @@ where
 
 import qualified Data.List.HT                  as L
 import           Data.Tree
-import qualified Text.ParserCombinators.ReadP  as RP
-import           Text.Read               hiding ( Lexeme(..) )
 import           Data.List
 import           Data.Bifunctor
 import           Data.Function
@@ -96,10 +93,6 @@ replaceTabs tw = L.replace "\t" (replicate tw ' ')
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = liftA2 (&&)
 
--- | Read both the value and the used up 'String'.
-lexGather :: Lexable a => ReadS (String, a)
-lexGather = RP.readP_to_S (RP.gather (readPrec_to_P lexAP 0))
-
 -- | Split a list on another list.
 --
 -- >>> breakList "wor" "helloworld"
@@ -138,28 +131,6 @@ onlyEither x _   = Left x
 
 joinFun :: (Monad m) => m (a -> m b) -> a -> m b
 joinFun f a = ($ a) =<< f
-
--- Parsing of 'String's, producing values.
-class Lexable a where
-  -- | 'readPrec' for 'Lexable'
-  lexAP :: ReadPrec a
-  default lexAP :: Read a => ReadPrec a
-  lexAP = readPrec
-
--- | 'reads' for 'Lexable'
-lexA :: Lexable a => String -> [(a, String)]
-lexA = readPrec_to_S lexAP 0
-
--- | 'read' for 'Lexable'
-lexS :: Lexable a => String -> a
-lexS = fst . head . lexA
-
-instance Lexable Int
-instance Lexable Integer
-instance Lexable Float
-instance Lexable Double
-instance Lexable String
-instance Lexable Char
 
 foldMapA :: (Applicative f, Monoid m, Foldable t) => (a -> f m) -> t a -> f m
 foldMapA f = foldr (liftA2 mappend . f) (pure mempty)

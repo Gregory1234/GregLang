@@ -2,6 +2,7 @@
 
 module GL.Lexer
   ( lexGregLang
+  , Lexable(..)
   , module GL.Token
   )
 where
@@ -10,6 +11,7 @@ import           Data.Char
 import           GL.Token
 import qualified Text.Megaparsec               as P
 import           GL.Utils
+import           GL.Lexer.Lexable
 
 spanSpace :: String -> (String, String)
 spanSpace xs@('\\' : '\\' : _) =

@@ -9,6 +9,7 @@ import           GL.Utils
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
 import           Data.String
+import           GL.Lexer.Lexable
 
 newtype Ident =
   Ident { getIdent :: String }

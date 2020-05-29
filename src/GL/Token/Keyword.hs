@@ -3,10 +3,10 @@ module GL.Token.Keyword
   )
 where
 
-import           GL.Utils
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
 import           Data.String
+import           GL.Lexer.Lexable
 
 data Operator = Add | Sub | Mul | Div | And | Mod | Or | XOr | BAnd | BOr | BXor
   deriving (Eq, Ord)

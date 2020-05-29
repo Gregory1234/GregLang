@@ -21,6 +21,7 @@ import           Text.Read               hiding ( Ident )
 import           GL.Ident
 import           Control.Lens
 import           GL.Token.Keyword
+import           GL.Lexer.Lexable
 
 updatePosString :: P.SourcePos -> String -> P.SourcePos
 updatePosString p []          = p
