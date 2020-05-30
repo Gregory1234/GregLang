@@ -1,5 +1,4 @@
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections, FlexibleInstances #-}
 module GL.Token.Keyword
   ( module GL.Token.Keyword
   )
@@ -36,6 +35,9 @@ getOperator BXOr = "^"
 instance Lexable Operator where
   lexAP = funToLexable getOperator
 
+instance IsString Operator where
+  fromString = lexS
+
 data Comparasion = Eq | NEq | GEq | LEq | Gt | Lt
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
@@ -50,6 +52,9 @@ getComparasion LEq = "<="
 instance Lexable Comparasion where
   lexAP = funToLexable getComparasion
 
+instance IsString Comparasion where
+  fromString = lexS
+
 data OtherOperator = Not | BNot | Inc | Dec
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
@@ -61,6 +66,9 @@ getOtherOperator Dec  = "--"
 
 instance Lexable OtherOperator where
   lexAP = funToLexable getOtherOperator
+
+instance IsString OtherOperator where
+  fromString = lexS
 
 data ReservedKeyword
   = If | For | While | Do | Switch
@@ -75,6 +83,9 @@ getReservedKeyword = map toLower . show
 instance Lexable ReservedKeyword where
   lexAP = funToLexable getReservedKeyword
 
+instance IsString ReservedKeyword where
+  fromString = lexS
+
 data BracketType = Bracks | Parens | Braces
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
@@ -88,6 +99,9 @@ type Bracket = (BracketType, Bool)
 instance Lexable Bracket where
   lexAP = helper False fst <|> helper True snd
     where helper b f = (, b) <$> funToLexable (f . getBracket)
+
+instance IsString Bracket where
+  fromString = lexS
 
 data Keyword
   = OKeyword Operator
@@ -110,7 +124,7 @@ instance Lexable Keyword where
     ]
 
 instance IsString Keyword where
-  fromString _ = undefined
+  fromString = lexS
 
 getKeyword :: Keyword -> String
 getKeyword (OKeyword  x       ) = getOperator x
