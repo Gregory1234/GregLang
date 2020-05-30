@@ -18,7 +18,6 @@ import           GL.Utils
 import qualified Text.Megaparsec               as P
 import qualified Text.ParserCombinators.ReadP  as RP
 import           Text.Read               hiding ( Ident )
-import           GL.Ident
 import           Control.Lens
 import           GL.Token.Keyword
 import           GL.Lexer.Lexable

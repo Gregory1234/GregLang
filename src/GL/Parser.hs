@@ -8,7 +8,6 @@ where
 
 import           Data.Void
 import           GL.Token
-import           GL.Ident
 import qualified Text.Megaparsec               as P
 import           Control.Lens            hiding ( (<&>)
                                                 , op

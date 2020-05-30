@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DerivingStrategies, FlexibleInstances #-}
 
 module GL.Utils
   ( module Data.Tree
@@ -34,6 +34,7 @@ import           Control.Monad.Except
 import           Data.Foldable
 import           Control.Applicative
 import           Debug.Trace
+import           Data.String
 
 
 -- | Like 'trace' but returns both the shown value and a third value.
@@ -157,3 +158,13 @@ infixl 3 |>
 -- | Add a default value for an 'Alternative'.
 (|>) :: Alternative f => f a -> a -> f a
 f |> a = f <|> pure a
+
+-- | An identifier beggining with lowercase.
+newtype Ident =
+  Ident { getIdent :: String }
+  deriving newtype (Eq, Ord, IsString, Treeable, Show)
+
+-- | An identifier beggining with uppercase.
+newtype ClassName =
+  ClassName { getClassName :: String }
+  deriving newtype (Eq, Ord, IsString, Treeable, Show)
