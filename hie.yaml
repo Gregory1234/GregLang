@@ -1,0 +1,9 @@
+
+cradle:
+  stack:
+    - path: "./app/"
+      component: "GregLang:exe:GregLangCompiler"
+    - path: "./src/"
+      component: "GregLang:lib"
+    - path: "./test/"
+      component: "GregLang:test:GregLang-test"
