@@ -13,8 +13,11 @@ import           Data.Bool
 import           GL.Utils
 import           GL.Lexer.Lexable
 
+
+
 funToLexable :: (Enum a, Bounded a) => (a -> String) -> ReadPrec a
-funToLexable f = lift $ RP.choice (map (\x -> RP.string (f x) $> x) enumerate)
+funToLexable f =
+  lift $ foldr1 (RP.<++) (map (\x -> RP.string (f x) $> x) enumerate)
 
 data Operator = Add | Sub | Mul | Div | Mod | And | Or | XOr | BAnd | BOr | BXOr
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
@@ -67,7 +70,7 @@ getOtherOperator Dec       = "--"
 getOtherOperator QMark     = "?"
 getOtherOperator Colon     = ":"
 getOtherOperator Semicolon = ";"
-getOtherOperator Comma     = "."
+getOtherOperator Comma     = ","
 getOtherOperator Dot       = "."
 
 instance Lexable OtherSymbol where
@@ -116,15 +119,16 @@ data Keyword
   | CKeyword Comparasion
   | RKeyword ReservedKeyword
   | BKeyword Bracket
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show, Read)
 
 instance Lexable Keyword where
-  lexAP = choice
+  lexAP = foldr1
+    (<++)
     [ CKeyword <$> lexAP
     , OSKeyword . Just <$> (lexAP <* lift (RP.char '='))
     , OSKeyword <$> (lift (RP.char '=') $> Nothing)
-    , OKeyword <$> lexAP
     , SKeyword <$> lexAP
+    , OKeyword <$> lexAP
     , BKeyword <$> lexAP
     , RKeyword <$> lexAP
     ]
