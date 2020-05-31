@@ -1,9 +1,11 @@
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree
+  , module GL.SyntaxTree.Expr
   )
 where
 
+import           GL.SyntaxTree.Expr
 import           GL.Utils
 
 data AST = AST
