@@ -1,8 +1,8 @@
 {-# LANGUAGE Strict #-}
 
 module GL.Lexer
-  ( lexGregLang
-  , Lexable(..)
+  ( module GL.Lexer
+  , module GL.Lexer.Lexable
   , module GL.Token
   )
 where

@@ -42,7 +42,7 @@ data Token
   | TFloatLit Double
   | TCharLit Char
   | TKeyword Keyword
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 spellToken :: Token -> String
 spellToken TBegin         = ""

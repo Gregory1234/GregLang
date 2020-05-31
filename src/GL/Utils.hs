@@ -86,9 +86,13 @@ replaceTabs
   -> String
 replaceTabs tw = L.replace "\t" (replicate tw ' ')
 
+infixl 2 |||
+
 -- | 'liftA2' on '||'
 (|||) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (|||) = liftA2 (||)
+
+infixl 3 &&&
 
 -- | 'liftA2' on '&&'
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
