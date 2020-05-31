@@ -8,6 +8,7 @@ where
 
 import           Data.Void
 import           GL.Token
+import           GL.SyntaxTree
 import qualified Text.Megaparsec               as P
 import           Control.Lens            hiding ( (<&>)
                                                 , op
@@ -74,6 +75,9 @@ safeBraces :: Parsable a => Parser [a]
 safeBraces = preKw "{" helper
   where helper = (kw "}" $> []) <|> ((:) <$> parser <*> helper)
 
-parseGregLang :: Parsable a => FilePath -> [LocToken] -> Either String a
+instance Parsable AST where
+  parser = undefined
+
+parseGregLang :: FilePath -> [LocToken] -> Either String AST
 parseGregLang p t =
   first P.errorBundlePretty $ flip evalState 0 $ P.runParserT parser p t
