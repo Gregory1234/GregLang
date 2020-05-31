@@ -55,25 +55,31 @@ instance Lexable Comparasion where
 instance IsString Comparasion where
   fromString = lexS
 
-data OtherOperator = Not | BNot | Inc | Dec
+data OtherSymbol
+  = Not | BNot | Inc | Dec | QMark | Colon | Semicolon | Comma | Dot
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-getOtherOperator :: OtherOperator -> String
-getOtherOperator Not  = "!"
-getOtherOperator BNot = "~"
-getOtherOperator Inc  = "++"
-getOtherOperator Dec  = "--"
+getOtherOperator :: OtherSymbol -> String
+getOtherOperator Not       = "!"
+getOtherOperator BNot      = "~"
+getOtherOperator Inc       = "++"
+getOtherOperator Dec       = "--"
+getOtherOperator QMark     = "?"
+getOtherOperator Colon     = ":"
+getOtherOperator Semicolon = ";"
+getOtherOperator Comma     = "."
+getOtherOperator Dot       = "."
 
-instance Lexable OtherOperator where
+instance Lexable OtherSymbol where
   lexAP = funToLexable getOtherOperator
 
-instance IsString OtherOperator where
+instance IsString OtherSymbol where
   fromString = lexS
 
 data ReservedKeyword
   = If | For | While | Do | Switch
   | Break | Continue
-  | Let
+  | Let | This
   | Package | Import | Class
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
@@ -105,7 +111,7 @@ instance IsString Bracket where
 
 data Keyword
   = OKeyword Operator
-  | OOKeyword OtherOperator
+  | SKeyword OtherSymbol
   | OSKeyword (Maybe Operator)
   | CKeyword Comparasion
   | RKeyword ReservedKeyword
@@ -118,7 +124,7 @@ instance Lexable Keyword where
     , OSKeyword . Just <$> (lexAP <* lift (RP.char '='))
     , OSKeyword <$> (lift (RP.char '=') $> Nothing)
     , OKeyword <$> lexAP
-    , OOKeyword <$> lexAP
+    , SKeyword <$> lexAP
     , BKeyword <$> lexAP
     , RKeyword <$> lexAP
     ]
@@ -128,7 +134,7 @@ instance IsString Keyword where
 
 getKeyword :: Keyword -> String
 getKeyword (OKeyword  x       ) = getOperator x
-getKeyword (OOKeyword x       ) = getOtherOperator x
+getKeyword (SKeyword  x       ) = getOtherOperator x
 getKeyword (OSKeyword (Just x)) = getOperator x ++ "="
 getKeyword (OSKeyword Nothing ) = "="
 getKeyword (CKeyword  x       ) = getComparasion x
