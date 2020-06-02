@@ -100,7 +100,12 @@ locTokenPretty LocToken {..} =
     ++ " at "
     ++ P.sourcePosPretty tokenPos
     ++ " spelled "
-    ++ show (tokenSpellingDuring ++ tokenSpellingAfter)
+    ++ show tokenSpellingDuring
+    ++ " with "
+    ++ show tokenSpellingAfter
+
+instance Show LocToken where
+  show = locTokenPretty
 
 recreateToken :: LocToken -> String
 recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
