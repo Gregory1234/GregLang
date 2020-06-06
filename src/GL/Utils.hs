@@ -1,4 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DerivingStrategies, FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module GL.Utils
   ( module Data.Tree

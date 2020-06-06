@@ -1,4 +1,6 @@
-{-# LANGUAGE TupleSections, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections #-}
+
 module GL.Token.Keyword
   ( module GL.Token.Keyword
   )

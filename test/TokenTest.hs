@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 module TokenTest where
 
 import           Test.Tasty

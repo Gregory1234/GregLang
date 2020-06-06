@@ -1,4 +1,6 @@
-{-# LANGUAGE DefaultSignatures, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DefaultSignatures #-}
+
 module GL.Lexer.Lexable
   ( module GL.Lexer.Lexable
   )

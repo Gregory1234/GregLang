@@ -1,5 +1,8 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards, FlexibleInstances, TypeFamilies,
-   Strict, DerivingVia, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE Strict #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GL.Token
   ( module GL.Token

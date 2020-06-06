@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module LexerTest where
 
 import           Test.Tasty
