@@ -81,13 +81,13 @@ instance IsString OtherSymbol where
 
 data ReservedKeyword
   = If | For | While | Do | Switch
-  | Break | Continue
-  | Let | This
+  | Break | Continue | Return
+  | Let | This | True' | False'
   | Package | Import | Class
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 getReservedKeyword :: ReservedKeyword -> String
-getReservedKeyword = map toLower . show
+getReservedKeyword = mapMaybe (liftA2 toMaybe isAlpha toLower) . show
 
 instance Lexable ReservedKeyword where
   lexAP = funToLexable getReservedKeyword
