@@ -68,21 +68,16 @@ instance Lexable ReservedKeyword where
 instance IsString ReservedKeyword where
   fromString = toReservedKeyword
 
-data BracketType = Bracks | Parens | Braces
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
+keywordType "BracketType" [("Bracks","[]"),("Parens","()"),("Braces","{}")]
 
 data BracketState = OpenB | ClosedB
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-fromBracket :: Bracket -> String
-fromBracket (Bracks, OpenB  ) = "["
-fromBracket (Bracks, ClosedB) = "]"
-fromBracket (Parens, OpenB  ) = "("
-fromBracket (Parens, ClosedB) = ")"
-fromBracket (Braces, OpenB  ) = "{"
-fromBracket (Braces, ClosedB) = "}"
-
 type Bracket = (BracketType, BracketState)
+
+fromBracket :: Bracket -> String
+fromBracket (b, OpenB  ) = let [o, _] = fromBracketType b in [o]
+fromBracket (b, ClosedB) = let [_, c] = fromBracketType b in [c]
 
 instance Lexable Bracket where
   lexAP = helper OpenB <|> helper ClosedB

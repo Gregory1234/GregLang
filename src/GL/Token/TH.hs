@@ -10,21 +10,26 @@ import           Language.Haskell.TH
 import           Data.Bifunctor
 
 keywordType :: String -> [(String, String)] -> Q [Dec]
-keywordType name' (map (bimap mkName StringL) -> vals) = pure
+keywordType name' (map (first mkName) -> vals) = pure
   [dataDecl, fromSig, fromDecl, toSig, toDecl]
  where
   name     = mkName name'
   from     = mkName ("from" ++ name')
   to       = mkName ("to" ++ name')
-  derivs   = [''Eq, ''Ord, ''Enum, ''Bounded, ''Show, ''Read]
+
+  arrT     = AppT . AppT ArrowT
+  strT     = AppT ListT (ConT ''Char)
+
   dataDecl = DataD [] name [] Nothing constructors deriveClauses
    where
     constructors  = map (\(x, _) -> NormalC x []) vals
+    derivs        = [''Eq, ''Ord, ''Enum, ''Bounded, ''Show, ''Read]
     deriveClauses = [DerivClause Nothing (map ConT derivs)]
-  arrHelper = AppT . AppT ArrowT
-  fromSig   = SigD from $ arrHelper (ConT name) (AppT ListT (ConT ''Char))
+
+  fromSig = SigD from $ arrT (ConT name) strT
   fromHelper (n, s) = Clause [ConP n []] (NormalB (LitE s)) []
-  fromDecl = FunD from (map fromHelper vals)
-  toSig    = SigD to $ arrHelper (AppT ListT (ConT ''Char)) (ConT name)
+  fromDecl = FunD from (map (fromHelper . second StringL) vals)
+
+  toSig    = SigD to $ arrT strT (ConT name)
   toHelper (n, s) = Clause [LitP s] (NormalB (ConE n)) []
-  toDecl = FunD to (map toHelper vals)
+  toDecl = FunD to (map (toHelper . second StringL) vals)
