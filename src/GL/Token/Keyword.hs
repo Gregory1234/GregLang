@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -11,105 +12,81 @@ import           Text.Read               hiding ( Ident )
 import           Data.String
 import           Data.Functor
 import           Data.Char
-import           Data.Bool
 import           GL.Utils
 import           GL.Lexer.Lexable
-
-
+import           GL.Token.TH
 
 funToLexable :: (Enum a, Bounded a) => (a -> String) -> ReadPrec a
 funToLexable f =
   lift $ foldr1 (RP.<++) (map (\x -> RP.string (f x) $> x) enumerate)
 
-data Operator = Add | Sub | Mul | Div | Mod | And | Or | XOr | BAnd | BOr | BXOr
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
-
-getOperator :: Operator -> String
-getOperator Add  = "+"
-getOperator Sub  = "-"
-getOperator Mul  = "*"
-getOperator Div  = "/"
-getOperator Mod  = "%"
-getOperator And  = "&&"
-getOperator Or   = "||"
-getOperator XOr  = "^^"
-getOperator BAnd = "&"
-getOperator BOr  = "|"
-getOperator BXOr = "^"
+keywordType "Operator"
+  [("Add","+"),("Sub","-")
+  ,("Mul","*"),("Div","/"),("Mod","%")
+  ,("And","&&"),("Or","||"),("XOr","^^")
+  ,("BAnd","&"),("BOr","|"),("BXOr","^")]
 
 instance Lexable Operator where
-  lexAP = funToLexable getOperator
+  lexAP = funToLexable fromOperator
 
 instance IsString Operator where
-  fromString = lexS
+  fromString = toOperator
 
-data Comparasion = Eq | NEq | GEq | LEq | Gt | Lt
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
-
-getComparasion :: Comparasion -> String
-getComparasion Eq  = "=="
-getComparasion NEq = "!="
-getComparasion Gt  = ">"
-getComparasion Lt  = "<"
-getComparasion GEq = ">="
-getComparasion LEq = "<="
+keywordType "Comparasion"
+  [("Eq","=="),("NEq","!=")
+  ,("Gt",">"),("Lt","<")
+  ,("GEq",">="),("LEq","<=")]
 
 instance Lexable Comparasion where
-  lexAP = funToLexable getComparasion
+  lexAP = funToLexable fromComparasion
 
 instance IsString Comparasion where
-  fromString = lexS
+  fromString = toComparasion
 
-data OtherSymbol
-  = Not | BNot | Inc | Dec | QMark | Colon | Semicolon | Comma | Dot
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
-
-getOtherOperator :: OtherSymbol -> String
-getOtherOperator Not       = "!"
-getOtherOperator BNot      = "~"
-getOtherOperator Inc       = "++"
-getOtherOperator Dec       = "--"
-getOtherOperator QMark     = "?"
-getOtherOperator Colon     = ":"
-getOtherOperator Semicolon = ";"
-getOtherOperator Comma     = ","
-getOtherOperator Dot       = "."
+keywordType "OtherSymbol"
+  [("Not","!"),("BNot","~")
+  ,("Inc","++"),("Dec","--")
+  ,("QMark","?"),("Colon",":")
+  ,("Semicolon",";"),("Comma",","),("Dot",".")]
 
 instance Lexable OtherSymbol where
-  lexAP = funToLexable getOtherOperator
+  lexAP = funToLexable fromOtherSymbol
 
 instance IsString OtherSymbol where
-  fromString = lexS
+  fromString = toOtherSymbol
 
-data ReservedKeyword
-  = If | For | While | Do | Switch
-  | Break | Continue | Return
-  | Let | This | True' | False'
-  | Package | Import | Class
-  deriving (Eq, Ord, Show, Read, Enum, Bounded)
-
-getReservedKeyword :: ReservedKeyword -> String
-getReservedKeyword = mapMaybe (liftA2 toMaybe isAlpha toLower) . show
+keywordType "ReservedKeyword"
+  (map (\a -> (a,mapMaybe (liftA2 toMaybe isAlpha toLower) a))
+    ["If","For","While","Do","Switch"
+    ,"Break","Continue","Return"
+    ,"Let","This","True'","False'"
+    ,"Package","Import","Class"])
 
 instance Lexable ReservedKeyword where
-  lexAP = funToLexable getReservedKeyword
+  lexAP = funToLexable fromReservedKeyword
 
 instance IsString ReservedKeyword where
-  fromString = lexS
+  fromString = toReservedKeyword
 
 data BracketType = Bracks | Parens | Braces
   deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-getBracket :: BracketType -> (String, String)
-getBracket Bracks = ("[", "]")
-getBracket Parens = ("(", ")")
-getBracket Braces = ("{", "}")
+data BracketState = OpenB | ClosedB
+  deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
-type Bracket = (BracketType, Bool)
+fromBracket :: Bracket -> String
+fromBracket (Bracks, OpenB  ) = "["
+fromBracket (Bracks, ClosedB) = "]"
+fromBracket (Parens, OpenB  ) = "("
+fromBracket (Parens, ClosedB) = ")"
+fromBracket (Braces, OpenB  ) = "{"
+fromBracket (Braces, ClosedB) = "}"
+
+type Bracket = (BracketType, BracketState)
 
 instance Lexable Bracket where
-  lexAP = helper False fst <|> helper True snd
-    where helper b f = (, b) <$> funToLexable (f . getBracket)
+  lexAP = helper OpenB <|> helper ClosedB
+    where helper b = (, b) <$> funToLexable (fromBracket . (, b))
 
 instance IsString Bracket where
   fromString = lexS
@@ -139,10 +116,10 @@ instance IsString Keyword where
   fromString = lexS
 
 getKeyword :: Keyword -> String
-getKeyword (OKeyword  x       ) = getOperator x
-getKeyword (SKeyword  x       ) = getOtherOperator x
-getKeyword (OSKeyword (Just x)) = getOperator x ++ "="
+getKeyword (OKeyword  x       ) = fromOperator x
+getKeyword (SKeyword  x       ) = fromOtherSymbol x
+getKeyword (OSKeyword (Just x)) = fromOperator x ++ "="
 getKeyword (OSKeyword Nothing ) = "="
-getKeyword (CKeyword  x       ) = getComparasion x
-getKeyword (RKeyword  x       ) = getReservedKeyword x
-getKeyword (BKeyword  (x, b)  ) = bool fst snd b $ getBracket x
+getKeyword (CKeyword  x       ) = fromComparasion x
+getKeyword (RKeyword  x       ) = fromReservedKeyword x
+getKeyword (BKeyword  x       ) = fromBracket x
