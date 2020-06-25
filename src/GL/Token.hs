@@ -55,7 +55,7 @@ spellToken (TStringLit x) = show x
 spellToken (TIntLit    x) = show x
 spellToken (TFloatLit  x) = show x
 spellToken (TCharLit   x) = show x
-spellToken (TKeyword   x) = getKeyword x
+spellToken (TKeyword   x) = fromKeyword x
 
 tokenPretty :: Token -> String
 tokenPretty TBegin         = "<begin>"
@@ -65,7 +65,7 @@ tokenPretty (TStringLit s) = "<string " ++ show s ++ ">"
 tokenPretty (TIntLit    s) = "<int " ++ show s ++ ">"
 tokenPretty (TFloatLit  s) = "<float " ++ show s ++ ">"
 tokenPretty (TCharLit   s) = "<char " ++ show s ++ ">"
-tokenPretty (TKeyword   s) = show (getKeyword s)
+tokenPretty (TKeyword   s) = show (fromKeyword s)
 
 instance Lexable Token where
   lexAP = foldl1
@@ -74,7 +74,7 @@ instance Lexable Token where
       a <- lexAP
       b <- lift RP.look
       guard
-        (null b || not (isLetter $ head $ getKeyword a) || not
+        (null b || not (isLetter $ head $ fromKeyword a) || not
           (isAlphaNum $ head b)
         )
       return $ TKeyword a

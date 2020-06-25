@@ -28,6 +28,9 @@ instance Arbitrary ReservedKeyword where
 instance Arbitrary BracketType where
   arbitrary = elements enumerate
 
+instance Arbitrary BracketState where
+  arbitrary = elements enumerate
+
 instance Arbitrary Keyword where
   arbitrary = oneof
     [ OKeyword <$> arbitrary
@@ -41,7 +44,7 @@ instance Arbitrary Keyword where
 instance Arbitrary Ident where
   arbitrary = do
     x <- arbitrary' ((isAlpha &&& isLower) ||| (== '_'))
-    let cond = (`notElem` map getReservedKeyword enumerate) . (toUpper x :)
+    let cond = (`notElem` map fromReservedKeyword enumerate) . (toUpper x :)
     xs <- listOf (arbitrary' $ isAlphaNum ||| (== '_')) `suchThat` cond
     return $ Ident (x : xs)
 
@@ -74,6 +77,6 @@ mkLocTokens = helper . P.initialPos
 
 tokenTests :: [TestTree]
 tokenTests =
-  [ testProperty "fromString . getKeyword == id"
-                 (\k -> fromString (getKeyword k) === k)
+  [ testProperty "fromString . fromKeyword == id"
+                 (\k -> fromString (fromKeyword k) === k)
   ]

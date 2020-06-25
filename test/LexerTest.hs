@@ -13,7 +13,7 @@ import           TokenTest
 
 lexerTests :: [TestTree]
 lexerTests =
-  [ testProperty "lexS . getKeyword == id" $ \k -> lexS (getKeyword k) === k
+  [ testProperty "lexS . fromKeyword == id" $ \k -> lexS (fromKeyword k) === k
   , testProperty "lexS . spellToken == id" $ \k -> lexS (spellToken k) === k
   , testProperty "lexemes of an empty file have the correct filename"
     $ \fn -> lexGregLang fn "" === Right (mkLocTokens fn [(TBegin, "", "")])
@@ -48,11 +48,11 @@ lexerTests =
           (mkLocTokens
             "file"
             [ (TBegin                             , ""     , "")
-            , (TKeyword (BKeyword (Braces, False)), "{"    , "")
-            , (TKeyword (BKeyword (Parens, False)), "("    , "")
+            , (TKeyword (BKeyword (Braces, OpenB)), "{"    , "")
+            , (TKeyword (BKeyword (Parens, OpenB)), "("    , "")
             , (TIdent "world"                     , "world", "")
-            , (TKeyword (BKeyword (Parens, True)) , ")"    , "")
-            , (TKeyword (BKeyword (Braces, True)) , "}"    , "")
+            , (TKeyword (BKeyword (Parens, ClosedB)), ")", "")
+            , (TKeyword (BKeyword (Braces, ClosedB)), "}", "")
             ]
           )
   , testCase "lexer supports strings with whitespace"

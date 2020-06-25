@@ -34,8 +34,8 @@ instance IsString Operator where
 
 keywordType "Comparasion"
   [("Eq","=="),("NEq","!=")
-  ,("Gt",">"),("Lt","<")
-  ,("GEq",">="),("LEq","<=")]
+  ,("GEq",">="),("LEq","<=")
+  ,("Gt",">"),("Lt","<")]
 
 instance Lexable Comparasion where
   lexAP = funToLexable fromComparasion
@@ -110,11 +110,11 @@ instance Lexable Keyword where
 instance IsString Keyword where
   fromString = lexS
 
-getKeyword :: Keyword -> String
-getKeyword (OKeyword  x       ) = fromOperator x
-getKeyword (SKeyword  x       ) = fromOtherSymbol x
-getKeyword (OSKeyword (Just x)) = fromOperator x ++ "="
-getKeyword (OSKeyword Nothing ) = "="
-getKeyword (CKeyword  x       ) = fromComparasion x
-getKeyword (RKeyword  x       ) = fromReservedKeyword x
-getKeyword (BKeyword  x       ) = fromBracket x
+fromKeyword :: Keyword -> String
+fromKeyword (OKeyword  x       ) = fromOperator x
+fromKeyword (SKeyword  x       ) = fromOtherSymbol x
+fromKeyword (OSKeyword (Just x)) = fromOperator x ++ "="
+fromKeyword (OSKeyword Nothing ) = "="
+fromKeyword (CKeyword  x       ) = fromComparasion x
+fromKeyword (RKeyword  x       ) = fromReservedKeyword x
+fromKeyword (BKeyword  x       ) = fromBracket x
