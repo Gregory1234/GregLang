@@ -19,22 +19,9 @@ import           Data.List.Split
 import           Data.Proxy
 import           GL.Utils
 import qualified Text.Megaparsec               as P
-import qualified Text.ParserCombinators.ReadP  as RP
-import           Text.Read               hiding ( Ident )
 import           Control.Lens
 import           GL.Token.Keyword
-import           GL.Lexer.Lexable
-
-updatePosString :: P.SourcePos -> String -> P.SourcePos
-updatePosString p []          = p
-updatePosString p ('\t' : xs) = updatePosString
-  (p { P.sourceColumn = P.sourceColumn p <> P.defaultTabWidth })
-  xs
-updatePosString p ('\n' : xs) = updatePosString
-  (p { P.sourceLine = P.sourceLine p <> P.pos1, P.sourceColumn = P.pos1 })
-  xs
-updatePosString p (_ : xs) =
-  updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
+import           GL.Lexer
 
 data Token
   = TBegin
@@ -68,22 +55,22 @@ tokenPretty (TCharLit   s) = "<char " ++ show s ++ ">"
 tokenPretty (TKeyword   s) = show (fromKeyword s)
 
 instance Lexable Token where
-  lexAP = foldl1
-    (<++)
-    [ do
-      a <- lexAP
-      b <- lift RP.look
+  consume = asum
+    [ (uses hadBegin not >>= guard >> hadBegin .= True) $> TBegin
+    , do
+      a <- consume
+      b <- use lexerData
       guard
         (null b || not (isLetter $ head $ fromKeyword a) || not
           (isAlphaNum $ head b)
         )
       return $ TKeyword a
-    , TStringLit <$> lexAP
-    , TIntLit <$> lexAP
-    , TFloatLit <$> lexAP
-    , TCharLit <$> lexAP
-    , TIdent <$> lexAP
-    , TTypeIdent <$> lexAP
+    , TStringLit <$> consume
+    , TFloatLit <$> consume
+    , TIntLit <$> consume
+    , TCharLit <$> consume
+    , TIdent <$> consume
+    , TTypeIdent <$> consume
     ]
 
 makePrisms ''Token
@@ -115,6 +102,15 @@ recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
 
 recreateToken' :: Int -> LocToken -> String
 recreateToken' tw = replaceTabs tw . recreateToken
+
+instance Lexable LocToken where
+  consume = do
+    tok <- consume
+    consumeSpace
+    sp <- use lexerPos
+    sd <- use lexerSpellingDuring
+    sa <- use lexerSpellingAfter
+    return $ LocToken tok sp sd sa
 
 instance P.Stream [LocToken] where
   type Token [LocToken] = LocToken

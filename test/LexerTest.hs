@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
 
 module LexerTest where
 
@@ -11,11 +12,11 @@ import           GL.Lexer
 import           GL.Utils
 import           TokenTest
 
+default (LocToken)
+
 lexerTests :: [TestTree]
 lexerTests =
-  [ testProperty "lexS . fromKeyword == id" $ \k -> lexS (fromKeyword k) === k
-  , testProperty "lexS . spellToken == id" $ \k -> lexS (spellToken k) === k
-  , testProperty "lexemes of an empty file have the correct filename"
+  [ testProperty "lexemes of an empty file have the correct filename"
     $ \fn -> lexGregLang fn "" === Right (mkLocTokens fn [(TBegin, "", "")])
   , testCase "lexer gives TBegin the whitespace"
     $   lexGregLang "file" "\t   \n\n"
@@ -26,6 +27,10 @@ lexerTests =
   , testCase "lexer puts an integer into TIntLit"
     $   lexGregLang "file" "123"
     @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TIntLit 123, "123", "")])
+  , testCase "lexer puts an float into TFloatLit"
+    $   lexGregLang "file" "123.1"
+    @?= Right
+          (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 123.1, "123.1", "")])
   , testCase "lexer seperates whitespace from a single identifier"
     $   lexGregLang "file" " \t hello\t\t"
     @?= Right
@@ -100,7 +105,7 @@ lexerTests =
           )
   , testCase "lexer fails at unfinished strings"
     $   lexGregLang "file" "\"unfinished string"
-    @?= Left "couldn't lex \"\\\"unfinished string\""
+    @?= Left "Lexer error"
   , testCase "lexer fails at weird symbols" $ lexGregLang "file" "$" @?= Left
-    "couldn't lex \"$\""
+    "Lexer error"
   ]

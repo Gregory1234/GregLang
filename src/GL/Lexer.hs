@@ -3,46 +3,25 @@
 module GL.Lexer
   ( module GL.Lexer
   , module GL.Lexer.Lexable
-  , module GL.Token
   )
 where
 
-import           GL.Token
-import qualified Text.Megaparsec               as P
 import           GL.Lexer.Lexable
+import           Control.Monad.Except
+import           Control.Applicative
 import           GL.Utils
-import           Data.Char
-import           Data.Bool
 
-data WhitespaceType = Whitespace | LineComment | BlockComment
+runLexer'
+  :: LexerT t (Except String) a -> FilePath -> String -> Either String [t]
+runLexer' x fn str =
+  runExcept . fmap (snd . fst) . getLexerT x $ emptyLexerState fn str
 
-spanSpace :: WhitespaceType -> String -> (String, String)
-spanSpace Whitespace ('/' : '/' : xs) =
-  let (w, r) = spanSpace LineComment xs in ('/' : '/' : w, r)
-spanSpace Whitespace ('/' : '*' : xs) =
-  let (w, r) = spanSpace BlockComment xs in ('/' : '*' : w, r)
-spanSpace Whitespace (x : xs) | isSpace x =
-  let (w, r) = spanSpace Whitespace xs in (x : w, r)
-spanSpace Whitespace xs = ("", xs)
-spanSpace LineComment ('\n' : xs) =
-  let (w, r) = spanSpace Whitespace xs in ('\n' : w, r)
-spanSpace BlockComment ('*' : '/' : xs) =
-  let (w, r) = spanSpace Whitespace xs in ('*' : '/' : w, r)
-spanSpace t (x : xs) = let (w, r) = spanSpace t xs in (x : w, r)
-spanSpace _ []       = ("", "")
+lexGregLang :: Lexable t => FilePath -> String -> Either String [t]
+lexGregLang = runLexer' lexer
 
+lexerChange :: Lexer t a -> LexerT t (Except String) a
+lexerChange (LexerT l) =
+  LexerT $ \s -> liftEither (maybeToEither "Lexer error" (l s))
 
-
-lexGregLang :: FilePath -> String -> Either String [LocToken]
-lexGregLang fn str = let pos = P.initialPos fn in helper False pos str
- where
-  helper True _   [] = Right []
-  helper b    pos s  = do
-    ((spell, stuff), rest) <- bool
-      (const . Right $ (("", TBegin), str))
-      (headError ("couldn't lex " ++ show s) . lexGather)
-      b
-      s
-    let (whspc, rest') = spanSpace Whitespace rest
-    let pos'           = updatePosString pos (spell ++ whspc)
-    (LocToken stuff pos spell whspc :) <$> helper True pos' rest'
+lexer :: Lexable t => LexerT t (Except String) ()
+lexer = lexerChange $ many lexToken *> eof

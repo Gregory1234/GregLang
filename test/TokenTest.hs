@@ -6,6 +6,7 @@ import           Test.Tasty.QuickCheck
 import qualified Text.Megaparsec               as P
 
 import           GL.Token
+import           GL.Lexer
 import           GL.Utils
 import           Data.String
 import           Data.Char

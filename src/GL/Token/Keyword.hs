@@ -1,24 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE LambdaCase #-}
 
 module GL.Token.Keyword
   ( module GL.Token.Keyword
   )
 where
 
-import qualified Text.ParserCombinators.ReadP  as RP
-import           Text.Read               hiding ( Ident )
 import           Data.String
-import           Data.Functor
 import           Data.Char
 import           GL.Utils
 import           GL.Lexer.Lexable
 import           GL.Token.TH
-
-funToLexable :: (Enum a, Bounded a) => (a -> String) -> ReadPrec a
-funToLexable f =
-  lift $ foldr1 (RP.<++) (map (\x -> RP.string (f x) $> x) enumerate)
 
 keywordType "Operator"
   [("Add","+"),("Sub","-")
@@ -27,7 +20,7 @@ keywordType "Operator"
   ,("BAnd","&"),("BOr","|"),("BXOr","^")]
 
 instance Lexable Operator where
-  lexAP = funToLexable fromOperator
+  consume = enumToken fromOperator
 
 instance IsString Operator where
   fromString = toOperator
@@ -38,7 +31,7 @@ keywordType "Comparasion"
   ,("Gt",">"),("Lt","<")]
 
 instance Lexable Comparasion where
-  lexAP = funToLexable fromComparasion
+  consume = enumToken fromComparasion
 
 instance IsString Comparasion where
   fromString = toComparasion
@@ -50,7 +43,7 @@ keywordType "OtherSymbol"
   ,("Semicolon",";"),("Comma",","),("Dot",".")]
 
 instance Lexable OtherSymbol where
-  lexAP = funToLexable fromOtherSymbol
+  consume = enumToken fromOtherSymbol
 
 instance IsString OtherSymbol where
   fromString = toOtherSymbol
@@ -63,7 +56,7 @@ keywordType "ReservedKeyword"
     ,"Package","Import","Class"])
 
 instance Lexable ReservedKeyword where
-  lexAP = funToLexable fromReservedKeyword
+  consume = enumToken fromReservedKeyword
 
 instance IsString ReservedKeyword where
   fromString = toReservedKeyword
@@ -80,11 +73,8 @@ fromBracket (b, OpenB  ) = let [o, _] = fromBracketType b in [o]
 fromBracket (b, ClosedB) = let [_, c] = fromBracketType b in [c]
 
 instance Lexable Bracket where
-  lexAP = helper OpenB <|> helper ClosedB
-    where helper b = (, b) <$> funToLexable (fromBracket . (, b))
-
-instance IsString Bracket where
-  fromString = lexS
+  consume =
+    asum $ fmap (\x -> string (fromBracket x) $> x) (enumerate <&> enumerate)
 
 data Keyword
   = OKeyword Operator
@@ -96,19 +86,18 @@ data Keyword
   deriving (Eq, Ord, Show, Read)
 
 instance Lexable Keyword where
-  lexAP = foldr1
-    (<++)
-    [ CKeyword <$> lexAP
-    , OSKeyword . Just <$> (lexAP <* lift (RP.char '='))
-    , OSKeyword <$> (lift (RP.char '=') $> Nothing)
-    , SKeyword <$> lexAP
-    , OKeyword <$> lexAP
-    , BKeyword <$> lexAP
-    , RKeyword <$> lexAP
+  consume = asum
+    [ CKeyword <$> consume
+    , OSKeyword . Just <$> (consume <* string "=")
+    , OSKeyword <$> (string "=" $> Nothing)
+    , SKeyword <$> consume
+    , OKeyword <$> consume
+    , BKeyword <$> consume
+    , RKeyword <$> consume
     ]
 
 instance IsString Keyword where
-  fromString = lexS
+  fromString = fromJust . evalLexer consume ""
 
 fromKeyword :: Keyword -> String
 fromKeyword (OKeyword  x       ) = fromOperator x

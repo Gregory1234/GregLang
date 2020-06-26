@@ -54,6 +54,7 @@ tests:
       - -with-rtsopts=-N
       - -Wall
       - -fno-warn-orphans
+      - -fno-warn-type-defaults
       - -O2
     dependencies:
       - GregLang

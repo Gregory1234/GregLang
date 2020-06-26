@@ -3,6 +3,7 @@ module Main where
 
 import           GL.Args
 import           GL.Lexer
+import           GL.Token
 import           GL.Parser
 import           GL.Utils
 import           Control.Monad.Except
