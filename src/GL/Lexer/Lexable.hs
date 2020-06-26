@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -14,47 +16,45 @@ import           Control.Applicative
 import           Control.Monad.State
 import           Control.Monad.Writer
 import qualified Text.Megaparsec               as P
+import           Text.Megaparsec                ( SourcePos(..) )
 import           Control.Lens
 import           GL.Utils
 import           Data.Char
+import qualified Data.Text                     as T
 
-updatePosString :: P.SourcePos -> String -> P.SourcePos
-updatePosString p []          = p
-updatePosString p ('\t' : xs) = updatePosString
-  (p { P.sourceColumn = P.sourceColumn p <> P.defaultTabWidth })
-  xs
-updatePosString p ('\n' : xs) = updatePosString
-  (p { P.sourceLine = P.sourceLine p <> P.pos1, P.sourceColumn = P.pos1 })
-  xs
-updatePosString p (_ : xs) =
-  updatePosString (p { P.sourceColumn = P.sourceColumn p <> P.pos1 }) xs
+updatePosString :: SourcePos -> Text -> SourcePos
+updatePosString = T.foldl $ \p -> \case
+  '\t' -> p { sourceColumn = sourceColumn p <> P.defaultTabWidth }
+  '\n' -> p { sourceLine = sourceLine p <> P.pos1, sourceColumn = P.pos1 }
+  _    -> p { sourceColumn = sourceColumn p <> P.pos1 }
 
 data LexerState = LexerState
-  { _lexerPos :: P.SourcePos
-  , _lexerSpellingDuring :: String
-  , _lexerSpellingAfter :: String
-  , _lexerData :: String
+  { _lexerPos :: SourcePos
+  , _lexerSpellingDuring :: Text
+  , _lexerSpellingAfter :: Text
+  , _lexerData :: Text
   , _hadBegin :: Bool
   }
   deriving (Show)
 
 makeLenses ''LexerState
 
-newtype LexerT t m a = LexerT {getLexerT :: LexerState -> m ((a,[t]),LexerState)}
-  deriving
-    ( Functor
-    , Applicative
-    , Monad
-    , Alternative
-    , MonadPlus
-    , MonadFail
-    , MonadWriter [t]
-    , MonadState LexerState
-    ) via (WriterT [t] (StateT LexerState m))
+newtype LexerT t m a
+  = LexerT { getLexerT :: LexerState -> m ((a, [t]), LexerState) }
+    deriving
+      ( Functor
+      , Applicative
+      , Monad
+      , Alternative
+      , MonadPlus
+      , MonadFail
+      , MonadWriter [t]
+      , MonadState LexerState
+      ) via (WriterT [t] (StateT LexerState m))
 
 type Lexer t = LexerT t Maybe
 
-emptyLexerState :: FilePath -> String -> LexerState
+emptyLexerState :: FilePath -> Text -> LexerState
 emptyLexerState fn str = LexerState { _lexerPos            = P.initialPos fn
                                     , _lexerSpellingDuring = ""
                                     , _lexerSpellingAfter  = ""
@@ -65,13 +65,13 @@ emptyLexerState fn str = LexerState { _lexerPos            = P.initialPos fn
 runLexerS :: Lexer t a -> LexerState -> Maybe [t]
 runLexerS x = fmap (snd . fst) . getLexerT x
 
-runLexer :: Lexer t a -> FilePath -> String -> Maybe [t]
+runLexer :: Lexer t a -> FilePath -> Text -> Maybe [t]
 runLexer x fn str = runLexerS x $ emptyLexerState fn str
 
 evalLexerS :: Lexer t a -> LexerState -> Maybe a
 evalLexerS x = fmap (fst . fst) . getLexerT x
 
-evalLexer :: Lexer t a -> FilePath -> String -> Maybe a
+evalLexer :: Lexer t a -> FilePath -> Text -> Maybe a
 evalLexer x fn str = evalLexerS x $ emptyLexerState fn str
 
 emitToken :: t -> Lexer t ()
@@ -81,26 +81,27 @@ emitToken t = tell [t] >> modify
     , _lexerSpellingAfter  = ""
     , _lexerPos            = updatePosString
                                _lexerPos
-                               (_lexerSpellingDuring ++ _lexerSpellingAfter)
+                               (_lexerSpellingDuring <> _lexerSpellingAfter)
     }
   )
 
 data WhitespaceType = Whitespace | LineComment | BlockComment
 
-spanSpace :: WhitespaceType -> String -> (String, String)
-spanSpace Whitespace ('/' : '/' : xs) =
-  let (w, r) = spanSpace LineComment xs in ('/' : '/' : w, r)
-spanSpace Whitespace ('/' : '*' : xs) =
-  let (w, r) = spanSpace BlockComment xs in ('/' : '*' : w, r)
-spanSpace Whitespace (x : xs) | isSpace x =
-  let (w, r) = spanSpace Whitespace xs in (x : w, r)
+spanSpace :: WhitespaceType -> Text -> (Text, Text)
+spanSpace Whitespace (T.splitAt 2 -> ("//", xs)) =
+  let (w, r) = spanSpace LineComment xs in ("//" <> w, r)
+spanSpace Whitespace (T.splitAt 2 -> ("/*", xs)) =
+  let (w, r) = spanSpace BlockComment xs in ("/*" <> w, r)
+spanSpace Whitespace (T.uncons -> Just (x, xs)) | isSpace x =
+  let (w, r) = spanSpace Whitespace xs in (x `T.cons` w, r)
 spanSpace Whitespace xs = ("", xs)
-spanSpace LineComment ('\n' : xs) =
-  let (w, r) = spanSpace Whitespace xs in ('\n' : w, r)
-spanSpace BlockComment ('*' : '/' : xs) =
-  let (w, r) = spanSpace Whitespace xs in ('*' : '/' : w, r)
-spanSpace t (x : xs) = let (w, r) = spanSpace t xs in (x : w, r)
-spanSpace _ []       = ("", "")
+spanSpace LineComment (T.uncons -> Just ('\n', xs)) =
+  let (w, r) = spanSpace Whitespace xs in ('\n' `T.cons` w, r)
+spanSpace BlockComment (T.splitAt 2 -> ("*/", xs)) =
+  let (w, r) = spanSpace Whitespace xs in ("*/" <> w, r)
+spanSpace t (T.uncons -> Just (x, xs)) =
+  let (w, r) = spanSpace t xs in (x `T.cons` w, r)
+spanSpace _ _ = ("", "")
 
 consumeSpace :: Lexer t ()
 consumeSpace = do
@@ -112,7 +113,7 @@ consumeSpace = do
 eof :: Lexer t ()
 eof = do
   dat <- use lexerData
-  guard (null dat)
+  guard (T.null dat)
   pure ()
 
 char :: Char -> Lexer t Char
@@ -129,17 +130,18 @@ charInside del = (char '\\' *> satisfyMaybe escChar)
   escChar x | x == del = Just del
   escChar _            = Nothing
 
-string :: String -> Lexer t String
+string :: Text -> Lexer t Text
 string str = scanToken (fmap (\(a, b) -> (a, a, b)) . scan str)
  where
-  scan []       dat = pure ([], dat)
-  scan (x : xs) dat = do
-    (y : ys) <- pure dat
-    guard (x == y)
-    (a, b) <- scan xs ys
-    pure (x : a, b)
+  scan s dat = case T.uncons s of
+    Nothing      -> Just (s, dat)
+    Just (x, xs) -> do
+      (y, ys) <- T.uncons dat
+      guard (x == y)
+      (a, b) <- scan xs ys
+      return (T.cons x a, b)
 
-scanToken :: (String -> Maybe (a, String, String)) -> Lexer t a
+scanToken :: (Text -> Maybe (a, Text, Text)) -> Lexer t a
 scanToken scan = do
   dat              <- use lexerData
   (Just (x, y, z)) <- pure $ scan dat
@@ -151,12 +153,11 @@ satisfy :: (Char -> Bool) -> Lexer t Char
 satisfy f = satisfyMaybe $ \c -> toMaybe (f c) c
 
 satisfyMaybe :: (Char -> Maybe a) -> Lexer t a
-satisfyMaybe f = scanToken $ \case
-  []       -> Nothing
-  (x : xs) -> (, [x], xs) <$> f x
+satisfyMaybe f = scanToken $ \t -> do
+  (x, xs) <- T.uncons t
+  (, T.singleton x, xs) <$> f x
 
-
-enumToken :: (Enum a, Bounded a) => (a -> String) -> Lexer t a
+enumToken :: (Enum a, Bounded a) => (a -> Text) -> Lexer t a
 enumToken f = asum $ fmap (\x -> string (f x) $> x) enumerate
 
 
@@ -167,11 +168,11 @@ instance Lexable String where
   consume = char '"' *> many (charInside '"') <* char '"'
 
 instance Lexable Ident where
-  consume = fmap Ident $ (:) <$> satisfy (isLower ||| (== '_')) <*> many
+  consume = fmap Ident $ T.cons <$> satisfy (isLower ||| (== '_')) <*> manyT
     (satisfy (isAlphaNum ||| (== '_')))
 
 instance Lexable ClassName where
-  consume = fmap ClassName $ (:) <$> satisfy isUpper <*> many
+  consume = fmap ClassName $ T.cons <$> satisfy isUpper <*> manyT
     (satisfy (isAlphaNum ||| (== '_')))
 
 instance Lexable Char where

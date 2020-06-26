@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module GL.SyntaxTree.Expr
   ( module GL.SyntaxTree.Expr
   )
@@ -6,10 +8,11 @@ where
 import           GL.Utils
 import           GL.Token.Keyword
 import           Data.Char
+import qualified Data.Text                     as T
 
 data Expr
   = EVar Ident (Maybe [Expr])
-  | EStr String
+  | EStr Text
   | EInt Integer
   | EReal Double
   | EChar Char
@@ -24,21 +27,21 @@ data Expr
   deriving (Show)
 
 instance Treeable Expr where
-  toTree EThis            = toTree "this"
-  toTree (EVar i Nothing) = toTree $ "ident " ++ getIdent i
+  toTree EThis            = empTree "this"
+  toTree (EVar i Nothing) = toTree $ "ident " <> getIdent i
   toTree (EVar i (Just es)) =
-    listToTree (getIdent i ++ "()") [listToTree "args" es]
-  toTree (EStr    s     ) = toTree $ "string " ++ show s
-  toTree (EInt    i     ) = toTree $ "int " ++ show i
-  toTree (EReal   r     ) = toTree $ "real " ++ show r
-  toTree (EChar   c     ) = toTree $ "char " ++ show c
-  toTree (EBool   b     ) = toTree $ "bool " ++ map toLower (show b)
+    listToTree (getIdent i <> "()") [listToTree "args" es]
+  toTree (EStr    s     ) = toTree $ "string " <> showT s
+  toTree (EInt    i     ) = toTree $ "int " <> showT i
+  toTree (EReal   r     ) = toTree $ "real " <> showT r
+  toTree (EChar   c     ) = toTree $ "char " <> showT c
+  toTree (EBool   b     ) = toTree $ "bool " <> T.map toLower (showT b)
   toTree (EParens e     ) = listToTree "parens" [e]
-  toTree (EBinOp e1 o e2) = listToTree (map toLower (show o)) [e1, e2]
+  toTree (EBinOp e1 o e2) = listToTree (T.map toLower (showT o)) [e1, e2]
   toTree (ENot  e       ) = toTree $ listToTree "not" [e]
   toTree (EBNot e       ) = toTree $ listToTree "bnot" [e]
   toTree (EIf e1 e2 e3) =
     Node "if" [toTree e1, listToTree "then" [e2], listToTree "else" [e3]]
-  toTree (EOf e n Nothing) = Node ("." ++ getIdent n) [toTree e]
+  toTree (EOf e n Nothing) = Node ("." <> getIdent n) [toTree e]
   toTree (EOf e n (Just es)) =
-    Node ("." ++ getIdent n ++ "()") [toTree e, listToTree "args" es]
+    Node ("." <> getIdent n <> "()") [toTree e, listToTree "args" es]

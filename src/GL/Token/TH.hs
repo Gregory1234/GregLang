@@ -8,6 +8,7 @@ where
 
 import           Language.Haskell.TH
 import           Data.Bifunctor
+import           Data.Text                      ( Text )
 
 keywordType :: String -> [(String, String)] -> Q [Dec]
 keywordType name' (map (first mkName) -> vals) = pure
@@ -18,7 +19,7 @@ keywordType name' (map (first mkName) -> vals) = pure
   to       = mkName ("to" ++ name')
 
   arrT     = AppT . AppT ArrowT
-  strT     = AppT ListT (ConT ''Char)
+  strT     = ConT ''Text
 
   dataDecl = DataD [] name [] Nothing constructors deriveClauses
    where

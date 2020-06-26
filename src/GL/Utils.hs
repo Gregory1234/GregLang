@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -18,10 +19,10 @@ module GL.Utils
   , (<|>)
   , module Debug.Trace
   , module GL.Utils
+  , Text
   )
 where
 
-import qualified Data.List.HT                  as L
 import           Data.Tree
 import           Data.List
 import           Data.Bifunctor
@@ -37,6 +38,8 @@ import           Data.Foldable
 import           Control.Applicative
 import           Debug.Trace
 import           Data.String
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 
 
 -- | Like 'trace' but returns both the shown value and a third value.
@@ -55,38 +58,48 @@ traceN s a = trace (s ++ show a) a
 class Treeable a where
   {-# MINIMAL toTree #-}
   -- | Convert a value to 'Tree' of 'String's.
-  toTree :: a -> Tree String
+  toTree :: a -> Tree Text
 
 -- | Convert a list of values to 'Tree' of 'String's with a given root.
 listToTree
   :: Treeable a
-  => String -- ^ Root of the tree
+  => Text -- ^ Root of the tree
   -> [a]
-  -> Tree String
+  -> Tree Text
 listToTree s = Node s . map toTree
 
 -- | Convert a list of values to 'Forest' of 'String's.
 --
 -- > toForest = map toTree
-toForest :: Treeable a => [a] -> Forest String
+toForest :: Treeable a => [a] -> Forest Text
 toForest = map toTree
 
 instance Treeable String where
-  toTree s = Node s []
+  toTree s = Node (T.pack s) []
 
 instance Treeable (Tree String) where
+  toTree = fmap T.pack
+
+instance Treeable Text where
+  toTree s = Node s []
+
+instance Treeable (Tree Text) where
   toTree = id
 
 -- | Pretty printing of a tree.
-treePP :: Treeable a => a -> String
-treePP = drawTree . toTree
+treePP :: Treeable a => a -> Text
+treePP = T.pack . drawTree . fmap T.unpack . toTree
+
+-- | A tree with no branches.
+empTree :: Text -> Tree Text
+empTree = toTree
 
 -- | Replaces tabs in a 'String' with a given amount of spaces using 'L.replace'.
 replaceTabs
   :: Int -- ^ Anount of spaces
-  -> String
-  -> String
-replaceTabs tw = L.replace "\t" (replicate tw ' ')
+  -> Text
+  -> Text
+replaceTabs tw = T.replace "\t" (T.replicate tw " ")
 
 infixl 2 |||
 
@@ -167,10 +180,21 @@ f |> a = f <|> pure a
 
 -- | An identifier beggining with lowercase.
 newtype Ident =
-  Ident { getIdent :: String }
+  Ident { getIdent :: Text }
   deriving newtype (Eq, Ord, IsString, Treeable, Show)
 
 -- | An identifier beggining with uppercase.
 newtype ClassName =
-  ClassName { getClassName :: String }
+  ClassName { getClassName :: Text }
   deriving newtype (Eq, Ord, IsString, Treeable, Show)
+
+-- | 'show' for 'Text'.
+showT :: Show a => a -> Text
+showT = T.pack . show
+
+-- | Zero or more 'Char's.
+manyT :: Alternative f => f Char -> f Text
+manyT v = many_v
+ where
+  many_v = some_v <|> pure T.empty
+  some_v = liftA2 T.cons v many_v

@@ -16,6 +16,7 @@ import           Control.Lens            hiding ( (<&>)
                                                 )
 import           GL.Utils
 import           Control.Monad.State
+import qualified Data.Text                     as T
 
 type Parser = P.ParsecT Void [LocToken] (State Integer)
 
@@ -26,7 +27,8 @@ satisfyT :: (Token -> Maybe a) -> Parser a
 satisfyT f = fromJust . f . tokenVal <$> P.satisfy (isJust . f . tokenVal)
 
 exactT :: Token -> Parser ()
-exactT t = P.label (tokenPretty t) $ void $ P.satisfy ((== t) . tokenVal)
+exactT t =
+  P.label (T.unpack $ tokenPretty t) $ void $ P.satisfy ((== t) . tokenVal)
 
 bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b

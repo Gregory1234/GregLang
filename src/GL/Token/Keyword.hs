@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -12,6 +13,7 @@ import           Data.Char
 import           GL.Utils
 import           GL.Lexer.Lexable
 import           GL.Token.TH
+import qualified Data.Text                     as T
 
 keywordType "Operator"
   [("Add","+"),("Sub","-")
@@ -23,7 +25,7 @@ instance Lexable Operator where
   consume = enumToken fromOperator
 
 instance IsString Operator where
-  fromString = toOperator
+  fromString = toOperator . T.pack
 
 keywordType "Comparasion"
   [("Eq","=="),("NEq","!=")
@@ -34,7 +36,7 @@ instance Lexable Comparasion where
   consume = enumToken fromComparasion
 
 instance IsString Comparasion where
-  fromString = toComparasion
+  fromString = toComparasion . T.pack
 
 keywordType "OtherSymbol"
   [("Not","!"),("BNot","~")
@@ -46,7 +48,7 @@ instance Lexable OtherSymbol where
   consume = enumToken fromOtherSymbol
 
 instance IsString OtherSymbol where
-  fromString = toOtherSymbol
+  fromString = toOtherSymbol . T.pack
 
 keywordType "ReservedKeyword"
   (map (\a -> (a,mapMaybe (liftA2 toMaybe isAlpha toLower) a))
@@ -59,7 +61,7 @@ instance Lexable ReservedKeyword where
   consume = enumToken fromReservedKeyword
 
 instance IsString ReservedKeyword where
-  fromString = toReservedKeyword
+  fromString = toReservedKeyword . T.pack
 
 keywordType "BracketType" [("Bracks","[]"),("Parens","()"),("Braces","{}")]
 
@@ -68,9 +70,9 @@ data BracketState = OpenB | ClosedB
 
 type Bracket = (BracketType, BracketState)
 
-fromBracket :: Bracket -> String
-fromBracket (b, OpenB  ) = let [o, _] = fromBracketType b in [o]
-fromBracket (b, ClosedB) = let [_, c] = fromBracketType b in [c]
+fromBracket :: Bracket -> Text
+fromBracket (b, OpenB  ) = T.singleton (fromBracketType b `T.index` 0)
+fromBracket (b, ClosedB) = T.singleton (fromBracketType b `T.index` 1)
 
 instance Lexable Bracket where
   consume =
@@ -97,12 +99,12 @@ instance Lexable Keyword where
     ]
 
 instance IsString Keyword where
-  fromString = fromJust . evalLexer consume ""
+  fromString = fromJust . evalLexer consume "" . T.pack
 
-fromKeyword :: Keyword -> String
+fromKeyword :: Keyword -> Text
 fromKeyword (OKeyword  x       ) = fromOperator x
 fromKeyword (SKeyword  x       ) = fromOtherSymbol x
-fromKeyword (OSKeyword (Just x)) = fromOperator x ++ "="
+fromKeyword (OSKeyword (Just x)) = fromOperator x <> "="
 fromKeyword (OSKeyword Nothing ) = "="
 fromKeyword (CKeyword  x       ) = fromComparasion x
 fromKeyword (RKeyword  x       ) = fromReservedKeyword x

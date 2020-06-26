@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module GL.SyntaxTree
   ( module GL.SyntaxTree

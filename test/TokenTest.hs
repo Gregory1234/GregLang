@@ -8,8 +8,8 @@ import qualified Text.Megaparsec               as P
 import           GL.Token
 import           GL.Lexer
 import           GL.Utils
-import           Data.String
 import           Data.Char
+import qualified Data.Text                     as T
 
 arbitrary' :: Arbitrary a => (a -> Bool) -> Gen a
 arbitrary' = suchThat arbitrary
@@ -45,13 +45,17 @@ instance Arbitrary Keyword where
 instance Arbitrary Ident where
   arbitrary = do
     x <- arbitrary' ((isAlpha &&& isLower) ||| (== '_'))
-    let cond = (`notElem` map fromReservedKeyword enumerate) . (toUpper x :)
-    xs <- listOf (arbitrary' $ isAlphaNum ||| (== '_')) `suchThat` cond
-    return $ Ident (x : xs)
+    let cond =
+          (`notElem` map fromReservedKeyword enumerate) . (toUpper x `T.cons`)
+    xs <-
+      fmap T.pack (listOf (arbitrary' $ isAlphaNum ||| (== '_')))
+        `suchThat` cond
+    return . Ident $ x `T.cons` xs
 
 instance Arbitrary ClassName where
   arbitrary =
     ClassName
+      .   T.pack
       <$> ((:) <$> arbitrary' (isAlpha &&& isUpper) <*> listOf
             (arbitrary' $ isAlphaNum ||| (== '_'))
           )
@@ -67,17 +71,14 @@ instance Arbitrary Token where
     , TKeyword <$> arbitrary
     ]
 
-mkLocTokens :: String -> [(Token, String, String)] -> [LocToken]
+mkLocTokens :: String -> [(Token, Text, Text)] -> [LocToken]
 mkLocTokens = helper . P.initialPos
  where
   helper _ [] = []
   helper pos ((t, d, a) : xs) =
-    LocToken t pos d a : helper (updatePosString pos (d ++ a)) xs
+    LocToken t pos d a : helper (updatePosString pos (d <> a)) xs
 
 
 
 tokenTests :: [TestTree]
-tokenTests =
-  [ testProperty "fromString . fromKeyword == id"
-                 (\k -> fromString (fromKeyword k) === k)
-  ]
+tokenTests = []

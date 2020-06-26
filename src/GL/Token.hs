@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Strict #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,15 +14,14 @@ where
 import           Control.Monad
 import           Data.Char
 import           Data.Function
-import           Data.List
 import qualified Data.List.NonEmpty            as NE
-import           Data.List.Split
 import           Data.Proxy
 import           GL.Utils
 import qualified Text.Megaparsec               as P
 import           Control.Lens
 import           GL.Token.Keyword
 import           GL.Lexer
+import qualified Data.Text                     as T
 
 data Token
   = TBegin
@@ -34,25 +34,25 @@ data Token
   | TKeyword Keyword
   deriving (Eq, Ord, Show)
 
-spellToken :: Token -> String
+spellToken :: Token -> Text
 spellToken TBegin         = ""
 spellToken (TIdent     x) = getIdent x
 spellToken (TTypeIdent x) = getClassName x
-spellToken (TStringLit x) = show x
-spellToken (TIntLit    x) = show x
-spellToken (TFloatLit  x) = show x
-spellToken (TCharLit   x) = show x
+spellToken (TStringLit x) = showT x
+spellToken (TIntLit    x) = showT x
+spellToken (TFloatLit  x) = showT x
+spellToken (TCharLit   x) = showT x
 spellToken (TKeyword   x) = fromKeyword x
 
-tokenPretty :: Token -> String
+tokenPretty :: Token -> Text
 tokenPretty TBegin         = "<begin>"
-tokenPretty (TIdent     s) = "<ident " ++ getIdent s ++ ">"
-tokenPretty (TTypeIdent s) = "<type ident " ++ getClassName s ++ ">"
-tokenPretty (TStringLit s) = "<string " ++ show s ++ ">"
-tokenPretty (TIntLit    s) = "<int " ++ show s ++ ">"
-tokenPretty (TFloatLit  s) = "<float " ++ show s ++ ">"
-tokenPretty (TCharLit   s) = "<char " ++ show s ++ ">"
-tokenPretty (TKeyword   s) = show (fromKeyword s)
+tokenPretty (TIdent     s) = "<ident " <> getIdent s <> ">"
+tokenPretty (TTypeIdent s) = "<type ident " <> getClassName s <> ">"
+tokenPretty (TStringLit s) = "<string " <> showT s <> ">"
+tokenPretty (TIntLit    s) = "<int " <> showT s <> ">"
+tokenPretty (TFloatLit  s) = "<float " <> showT s <> ">"
+tokenPretty (TCharLit   s) = "<char " <> showT s <> ">"
+tokenPretty (TKeyword   s) = showT (fromKeyword s)
 
 instance Lexable Token where
   consume = asum
@@ -61,8 +61,8 @@ instance Lexable Token where
       a <- consume
       b <- use lexerData
       guard
-        (null b || not (isLetter $ head $ fromKeyword a) || not
-          (isAlphaNum $ head b)
+        (T.null b || not (isLetter $ T.head $ fromKeyword a) || not
+          (isAlphaNum $ T.head b)
         )
       return $ TKeyword a
     , TStringLit <$> consume
@@ -79,28 +79,28 @@ data LocToken =
   LocToken
     { tokenVal :: Token
     , tokenPos :: P.SourcePos
-    , tokenSpellingDuring :: String
-    , tokenSpellingAfter :: String
+    , tokenSpellingDuring :: Text
+    , tokenSpellingAfter :: Text
     }
   deriving (Eq, Ord)
 
-locTokenPretty :: LocToken -> String
+locTokenPretty :: LocToken -> Text
 locTokenPretty LocToken {..} =
   tokenPretty tokenVal
-    ++ " at "
-    ++ P.sourcePosPretty tokenPos
-    ++ " spelled "
-    ++ show tokenSpellingDuring
-    ++ " with "
-    ++ show tokenSpellingAfter
+    <> " at "
+    <> T.pack (P.sourcePosPretty tokenPos)
+    <> " spelled "
+    <> showT tokenSpellingDuring
+    <> " with "
+    <> showT tokenSpellingAfter
 
 instance Show LocToken where
-  show = locTokenPretty
+  show = T.unpack . locTokenPretty
 
-recreateToken :: LocToken -> String
-recreateToken LocToken {..} = tokenSpellingDuring ++ tokenSpellingAfter
+recreateToken :: LocToken -> Text
+recreateToken LocToken {..} = tokenSpellingDuring <> tokenSpellingAfter
 
-recreateToken' :: Int -> LocToken -> String
+recreateToken' :: Int -> LocToken -> Text
 recreateToken' tw = replaceTabs tw . recreateToken
 
 instance Lexable LocToken where
@@ -127,9 +127,9 @@ instance P.Stream [LocToken] where
              | otherwise = Just (splitAt n s)
   takeWhile_ = span
   showTokens Proxy =
-    intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
+    T.unpack . T.intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
   reachOffset o P.PosState {..} =
-    ( line
+    ( T.unpack line
     , P.PosState { P.pstateInput      = rest
                  , P.pstateOffset     = max pstateOffset o
                  , P.pstateSourcePos  = epos
@@ -140,9 +140,15 @@ instance P.Stream [LocToken] where
    where
     ofDiff      = o - pstateOffset
     (tok, rest) = splitAt ofDiff pstateInput
-    epos        = updatePosString pstateSourcePos $ tok >>= recreateToken'
-      (P.unPos pstateTabWidth)
+    epos =
+      updatePosString pstateSourcePos
+        .   T.concat
+        $   recreateToken' (P.unPos pstateTabWidth)
+        <$> tok
     strs =
-      splitOn "\n" (pstateInput >>= recreateToken' (P.unPos pstateTabWidth))
+      T.splitOn "\n"
+        .   T.concat
+        $   recreateToken' (P.unPos pstateTabWidth)
+        <$> pstateInput
     line = strs !! min (length strs - 1) ind
     ind  = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos
