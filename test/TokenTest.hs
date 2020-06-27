@@ -6,10 +6,10 @@ import           Test.Tasty.QuickCheck
 import qualified Text.Megaparsec               as P
 
 import           GL.Token
-import           GL.Lexer
 import           GL.Utils
 import           Data.Char
 import qualified Data.Text                     as T
+import           Data.Text.Arbitrary            ( )
 
 arbitrary' :: Arbitrary a => (a -> Bool) -> Gen a
 arbitrary' = suchThat arbitrary

@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -21,7 +22,7 @@ keywordType "Operator"
   ,("And","&&"),("Or","||"),("XOr","^^")
   ,("BAnd","&"),("BOr","|"),("BXOr","^")]
 
-instance Lexable Operator where
+instance LexerState s => Lexable s Operator where
   consume = enumToken fromOperator
 
 instance IsString Operator where
@@ -32,7 +33,7 @@ keywordType "Comparasion"
   ,("GEq",">="),("LEq","<=")
   ,("Gt",">"),("Lt","<")]
 
-instance Lexable Comparasion where
+instance LexerState s => Lexable s Comparasion where
   consume = enumToken fromComparasion
 
 instance IsString Comparasion where
@@ -44,7 +45,7 @@ keywordType "OtherSymbol"
   ,("QMark","?"),("Colon",":")
   ,("Semicolon",";"),("Comma",","),("Dot",".")]
 
-instance Lexable OtherSymbol where
+instance LexerState s => Lexable s OtherSymbol where
   consume = enumToken fromOtherSymbol
 
 instance IsString OtherSymbol where
@@ -57,7 +58,7 @@ keywordType "Keyword"
     ,"Let","This","True'","False'"
     ,"Package","Import","Class"])
 
-instance Lexable Keyword where
+instance LexerState s => Lexable s Keyword where
   consume = enumToken fromKeyword
 
 instance IsString Keyword where
@@ -74,7 +75,7 @@ fromBracket :: Bracket -> Text
 fromBracket (b, OpenB  ) = T.singleton (fromBracketType b `T.index` 0)
 fromBracket (b, ClosedB) = T.singleton (fromBracketType b `T.index` 1)
 
-instance Lexable Bracket where
+instance LexerState s => Lexable s Bracket where
   consume =
     asum $ fmap (\x -> string (fromBracket x) $> x) (enumerate <&> enumerate)
 
@@ -86,7 +87,7 @@ data Symbol
   | BrSym Bracket
   deriving (Eq, Ord, Show, Read)
 
-instance Lexable Symbol where
+instance LexerState s => Lexable s Symbol where
   consume = asum
     [ CompOpSym <$> consume
     , SetOpSym . Just <$> (consume <* string "=")
@@ -96,7 +97,7 @@ instance Lexable Symbol where
     ]
 
 instance IsString Symbol where
-  fromString = fromJust . evalLexer consume "" . T.pack
+  fromString = fromJust . evalLexerS consume . EmptyState . T.pack
 
 fromSymbol :: Symbol -> Text
 fromSymbol (OpSym     x       ) = fromOperator x

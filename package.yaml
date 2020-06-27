@@ -63,3 +63,4 @@ tests:
       - tasty-quickcheck
       - HUnit
       - tasty-hunit
+      - quickcheck-text

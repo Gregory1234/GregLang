@@ -68,7 +68,7 @@ instance Parsable Integer where
 instance Parsable Double where
   parser = litParser "<double literal>" _TFloatLit
 
-instance Parsable String where
+instance Parsable Text where
   parser = litParser "<string literal>" _TStringLit
 
 instance Parsable Char where

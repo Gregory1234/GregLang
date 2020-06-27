@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Strict #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -18,16 +20,54 @@ import qualified Data.List.NonEmpty            as NE
 import           Data.Proxy
 import           GL.Utils
 import qualified Text.Megaparsec               as P
+import           Text.Megaparsec                ( SourcePos(..) )
 import           Control.Lens
 import           GL.Token.Keyword
 import           GL.Lexer
 import qualified Data.Text                     as T
 
+updatePosString :: SourcePos -> Text -> SourcePos
+updatePosString = T.foldl $ \p -> \case
+  '\t' -> p { sourceColumn = sourceColumn p <> P.defaultTabWidth }
+  '\n' -> p { sourceLine = sourceLine p <> P.pos1, sourceColumn = P.pos1 }
+  _    -> p { sourceColumn = sourceColumn p <> P.pos1 }
+
+data LocTokenState = LocTokenState
+  { _lexerPos :: SourcePos
+  , _lexerSpellingDuring :: Text
+  , _lexerSpellingAfter :: Text
+  , _lexerData :: Text
+  , _hadBegin :: Bool
+  }
+  deriving (Show)
+
+makeLenses ''LocTokenState
+
+instance LexerState LocTokenState where
+  rest      = lexerData
+  addDuring = (lexerSpellingDuring <>~)
+  addAfter  = (lexerSpellingAfter <>~)
+  commit s@LocTokenState {..} = s
+    { _lexerPos            = updatePosString
+                               _lexerPos
+                               (_lexerSpellingDuring <> _lexerSpellingAfter)
+    , _lexerSpellingDuring = ""
+    , _lexerSpellingAfter  = ""
+    }
+
+emptyLexerState :: FilePath -> Text -> LocTokenState
+emptyLexerState fp str = LocTokenState { _lexerPos            = P.initialPos fp
+                                       , _lexerSpellingDuring = ""
+                                       , _lexerSpellingAfter  = ""
+                                       , _lexerData           = str
+                                       , _hadBegin            = False
+                                       }
+
 data Token
   = TBegin
   | TIdent Ident
   | TTypeIdent ClassName
-  | TStringLit String
+  | TStringLit Text
   | TIntLit Integer
   | TFloatLit Double
   | TCharLit Char
@@ -57,7 +97,7 @@ tokenPretty (TCharLit   s) = "<char " <> showT s <> ">"
 tokenPretty (TSymbol    s) = showT (fromSymbol s)
 tokenPretty (TKeyword   s) = showT (fromKeyword s)
 
-instance Lexable Token where
+instance Lexable LocTokenState Token where
   consume = asum
     [ (uses hadBegin not >>= guard >> hadBegin .= True) $> TBegin
     , do
@@ -104,7 +144,7 @@ recreateToken LocToken {..} = tokenSpellingDuring <> tokenSpellingAfter
 recreateToken' :: Int -> LocToken -> Text
 recreateToken' tw = replaceTabs tw . recreateToken
 
-instance Lexable LocToken where
+instance Lexable LocTokenState LocToken where
   consume = do
     tok <- consume
     consumeSpace
@@ -131,7 +171,7 @@ instance P.Stream [LocToken] where
     T.unpack . T.intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
   reachOffset o P.PosState {..} =
     ( T.unpack line
-    , P.PosState { P.pstateInput      = rest
+    , P.PosState { P.pstateInput      = rst
                  , P.pstateOffset     = max pstateOffset o
                  , P.pstateSourcePos  = epos
                  , P.pstateTabWidth   = pstateTabWidth
@@ -139,8 +179,8 @@ instance P.Stream [LocToken] where
                  }
     )
    where
-    ofDiff      = o - pstateOffset
-    (tok, rest) = splitAt ofDiff pstateInput
+    ofDiff     = o - pstateOffset
+    (tok, rst) = splitAt ofDiff pstateInput
     epos =
       updatePosString pstateSourcePos
         .   T.concat

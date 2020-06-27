@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 
@@ -14,31 +15,34 @@ import           TokenTest
 
 default (LocToken)
 
+lexGregLang' :: Lexable LocTokenState t => FilePath -> Text -> Either String [t]
+lexGregLang' fn str = lexGregLang $ emptyLexerState fn str
+
 lexerTests :: [TestTree]
 lexerTests =
   [ testProperty "lexemes of an empty file have the correct filename"
-    $ \fn -> lexGregLang fn "" === Right (mkLocTokens fn [(TBegin, "", "")])
+    $ \fn -> lexGregLang' fn "" === Right (mkLocTokens fn [(TBegin, "", "")])
   , testCase "lexer gives TBegin the whitespace"
-    $   lexGregLang "file" "\t   \n\n"
+    $   lexGregLang' "file" "\t   \n\n"
     @?= Right (mkLocTokens "file" [(TBegin, "", "\t   \n\n")])
   , testProperty "lexer puts an identifier into TIdent" $ \i ->
-    lexGregLang "file" (getIdent i) === Right
+    lexGregLang' "file" (getIdent i) === Right
       (mkLocTokens "file" [(TBegin, "", ""), (TIdent i, getIdent i, "")])
   , testCase "lexer puts an integer into TIntLit"
-    $   lexGregLang "file" "123"
+    $   lexGregLang' "file" "123"
     @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TIntLit 123, "123", "")])
   , testCase "lexer puts an float into TFloatLit"
-    $   lexGregLang "file" "123.1"
+    $   lexGregLang' "file" "123.1"
     @?= Right
           (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 123.1, "123.1", "")])
   , testCase "lexer seperates whitespace from a single identifier"
-    $   lexGregLang "file" " \t hello\t\t"
+    $   lexGregLang' "file" " \t hello\t\t"
     @?= Right
           (mkLocTokens "file"
                        [(TBegin, "", " \t "), (TIdent "hello", "hello", "\t\t")]
           )
   , testCase "lexer seperates whitespace from multiple identifiers"
-    $   lexGregLang "file" " \t hello\t\tworld  "
+    $   lexGregLang' "file" " \t hello\t\tworld  "
     @?= Right
           (mkLocTokens
             "file"
@@ -48,7 +52,7 @@ lexerTests =
             ]
           )
   , testCase "lexer separates tokens without whitespace between them"
-    $   lexGregLang "file" "{(world)}"
+    $   lexGregLang' "file" "{(world)}"
     @?= Right
           (mkLocTokens
             "file"
@@ -61,14 +65,14 @@ lexerTests =
             ]
           )
   , testCase "lexer supports strings with whitespace"
-    $   lexGregLang "file" "\"hello world\""
+    $   lexGregLang' "file" "\"hello world\""
     @?= Right
           (mkLocTokens
             "file"
             [(TBegin, "", ""), (TStringLit "hello world", "\"hello world\"", "")]
           )
   , testCase "lexer supports strings with escaped quotes"
-    $   lexGregLang "file" "\"hello \\\"world\\\"\""
+    $   lexGregLang' "file" "\"hello \\\"world\\\"\""
     @?= Right
           (mkLocTokens
             "file"
@@ -77,14 +81,14 @@ lexerTests =
             ]
           )
   , testCase "lexer supports strings with escaped slashes"
-    $   lexGregLang "file" "\"hello \\\\\""
+    $   lexGregLang' "file" "\"hello \\\\\""
     @?= Right
           (mkLocTokens
             "file"
             [(TBegin, "", ""), (TStringLit "hello \\", "\"hello \\\\\"", "")]
           )
   , testCase "lexer supports line comments"
-    $   lexGregLang "file" "hello//world \n hey"
+    $   lexGregLang' "file" "hello//world \n hey"
     @?= Right
           (mkLocTokens
             "file"
@@ -94,7 +98,7 @@ lexerTests =
             ]
           )
   , testCase "lexer supports block comments"
-    $   lexGregLang "file" "hello/*world \n hey*/ hey"
+    $   lexGregLang' "file" "hello/*world \n hey*/ hey"
     @?= Right
           (mkLocTokens
             "file"
@@ -104,8 +108,8 @@ lexerTests =
             ]
           )
   , testCase "lexer fails at unfinished strings"
-    $   lexGregLang "file" "\"unfinished string"
+    $   lexGregLang' "file" "\"unfinished string"
     @?= Left "Lexer error"
-  , testCase "lexer fails at weird symbols" $ lexGregLang "file" "$" @?= Left
+  , testCase "lexer fails at weird symbols" $ lexGregLang' "file" "$" @?= Left
     "Lexer error"
   ]
