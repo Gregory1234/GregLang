@@ -1,6 +1,7 @@
-sudo: false
 
-language: c
+os: linux
+
+language: generic
 
 cache:
   directories:
