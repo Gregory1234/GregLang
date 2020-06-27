@@ -33,7 +33,6 @@ import           Data.Maybe
 import           Control.Monad
 import           Control.Lens
 import           Data.Functor.Identity
-import           Control.Monad.Except
 import           Data.Foldable
 import           Control.Applicative
 import           Debug.Trace
@@ -42,7 +41,7 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 
 
--- | Like 'trace' but returns both the shown value and a third value.
+-- | Like 'trace' but prints both the message and the value.
 --
 -- >>> traceN "msg " 12
 -- msg 12
@@ -68,18 +67,6 @@ listToTree
   -> Tree Text
 listToTree s = Node s . map toTree
 
--- | Convert a list of values to 'Forest' of 'String's.
---
--- > toForest = map toTree
-toForest :: Treeable a => [a] -> Forest Text
-toForest = map toTree
-
-instance Treeable String where
-  toTree s = Node (T.pack s) []
-
-instance Treeable (Tree String) where
-  toTree = fmap T.pack
-
 instance Treeable Text where
   toTree s = Node s []
 
@@ -94,7 +81,7 @@ treePP = T.pack . drawTree . fmap T.unpack . toTree
 empTree :: Text -> Tree Text
 empTree = toTree
 
--- | Replaces tabs in a 'String' with a given amount of spaces using 'L.replace'.
+-- | Replaces tabs in a 'String' with a given amount of spaces.
 replaceTabs
   :: Int -- ^ Anount of spaces
   -> Text
@@ -113,18 +100,6 @@ infixl 3 &&&
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = liftA2 (&&)
 
--- | Split a list on another list.
---
--- >>> breakList "wor" "helloworld"
--- ("hello", "world")
---
--- >>> breakList "abc" "helloworld"
--- ("helloworld", "")
-breakList :: Eq a => [a] -> [a] -> ([a], [a])
-breakList xs ys | xs `isPrefixOf` ys = ([], ys)
-breakList _  []                      = ([], [])
-breakList xs (y : ys)                = first (y :) $ breakList xs ys
-
 infixl 4 <&>
 -- | 'liftA2' on the pair constructor.
 (<&>) :: Applicative f => f a -> f b -> f (a, b)
@@ -138,45 +113,6 @@ enumerate = [minBound .. maxBound]
 maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither _ (Just x) = Right x
 maybeToEither x Nothing  = Left x
-
--- | Safe version of 'head'.
-headError :: MonadError a m => a -> [b] -> m b
-headError x []      = throwError x
-headError _ (x : _) = return x
-
--- | Safe version of 'only'.
-onlyEither :: a -> [b] -> Either a b
-onlyEither _ [x] = Right x
-onlyEither x _   = Left x
-
-joinFun :: (Monad m) => m (a -> m b) -> a -> m b
-joinFun f a = ($ a) =<< f
-
-foldMapA :: (Applicative f, Monoid m, Foldable t) => (a -> f m) -> t a -> f m
-foldMapA f = foldr (liftA2 mappend . f) (pure mempty)
-
--- | Change a 'Maybe' value to any 'Alternative'.
-maybeToAlt :: Alternative m => Maybe a -> m a
-maybeToAlt (Just a) = pure a
-maybeToAlt Nothing  = empty
-
--- | Append lists fairly.
-fairAppend :: [a] -> [a] -> [a]
-fairAppend (x : xs) (y : ys) = x : y : fairAppend xs ys
-fairAppend []       y        = y
-fairAppend x        []       = x
-
--- | Take the only element of a list.
-only :: [a] -> a
-only [x] = x
-only []  = error "GL.Utils.only: []"
-only _   = error "GL.Utils.only: too big"
-
-infixl 3 |>
-
--- | Add a default value for an 'Alternative'.
-(|>) :: Alternative f => f a -> a -> f a
-f |> a = f <|> pure a
 
 -- | An identifier beggining with lowercase.
 newtype Ident =
