@@ -52,12 +52,12 @@ lexerTests =
     @?= Right
           (mkLocTokens
             "file"
-            [ (TBegin                             , ""     , "")
-            , (TKeyword (BKeyword (Braces, OpenB)), "{"    , "")
-            , (TKeyword (BKeyword (Parens, OpenB)), "("    , "")
-            , (TIdent "world"                     , "world", "")
-            , (TKeyword (BKeyword (Parens, ClosedB)), ")", "")
-            , (TKeyword (BKeyword (Braces, ClosedB)), "}", "")
+            [ (TBegin                           , ""     , "")
+            , (TSymbol (BrSym (Braces, OpenB))  , "{"    , "")
+            , (TSymbol (BrSym (Parens, OpenB))  , "("    , "")
+            , (TIdent "world"                   , "world", "")
+            , (TSymbol (BrSym (Parens, ClosedB)), ")"    , "")
+            , (TSymbol (BrSym (Braces, ClosedB)), "}"    , "")
             ]
           )
   , testCase "lexer supports strings with whitespace"

@@ -31,6 +31,7 @@ data Token
   | TIntLit Integer
   | TFloatLit Double
   | TCharLit Char
+  | TSymbol Symbol
   | TKeyword Keyword
   deriving (Eq, Ord, Show)
 
@@ -42,6 +43,7 @@ spellToken (TStringLit x) = showT x
 spellToken (TIntLit    x) = showT x
 spellToken (TFloatLit  x) = showT x
 spellToken (TCharLit   x) = showT x
+spellToken (TSymbol    x) = fromSymbol x
 spellToken (TKeyword   x) = fromKeyword x
 
 tokenPretty :: Token -> Text
@@ -52,6 +54,7 @@ tokenPretty (TStringLit s) = "<string " <> showT s <> ">"
 tokenPretty (TIntLit    s) = "<int " <> showT s <> ">"
 tokenPretty (TFloatLit  s) = "<float " <> showT s <> ">"
 tokenPretty (TCharLit   s) = "<char " <> showT s <> ">"
+tokenPretty (TSymbol    s) = showT (fromSymbol s)
 tokenPretty (TKeyword   s) = showT (fromKeyword s)
 
 instance Lexable Token where
@@ -60,11 +63,9 @@ instance Lexable Token where
     , do
       a <- consume
       b <- use lexerData
-      guard
-        (T.null b || not (isLetter $ T.head $ fromKeyword a) || not
-          (isAlphaNum $ T.head b)
-        )
+      guard (T.null b || not (isAlphaNum $ T.head b))
       return $ TKeyword a
+    , TSymbol <$> consume
     , TStringLit <$> consume
     , TFloatLit <$> consume
     , TIntLit <$> consume

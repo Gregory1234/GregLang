@@ -23,30 +23,28 @@ instance Arbitrary OtherSymbol where
 instance Arbitrary Comparasion where
   arbitrary = elements enumerate
 
-instance Arbitrary ReservedKeyword where
-  arbitrary = elements enumerate
-
 instance Arbitrary BracketType where
   arbitrary = elements enumerate
 
 instance Arbitrary BracketState where
   arbitrary = elements enumerate
 
-instance Arbitrary Keyword where
+instance Arbitrary Symbol where
   arbitrary = oneof
-    [ OKeyword <$> arbitrary
-    , SKeyword <$> arbitrary
-    , OSKeyword <$> arbitrary
-    , CKeyword <$> arbitrary
-    , RKeyword <$> arbitrary
-    , BKeyword <$> arbitrary
+    [ OpSym <$> arbitrary
+    , OtherSym <$> arbitrary
+    , SetOpSym <$> arbitrary
+    , CompOpSym <$> arbitrary
+    , BrSym <$> arbitrary
     ]
+
+instance Arbitrary Keyword where
+  arbitrary = elements enumerate
 
 instance Arbitrary Ident where
   arbitrary = do
     x <- arbitrary' ((isAlpha &&& isLower) ||| (== '_'))
-    let cond =
-          (`notElem` map fromReservedKeyword enumerate) . (toUpper x `T.cons`)
+    let cond = (`notElem` map fromKeyword enumerate) . (toUpper x `T.cons`)
     xs <-
       fmap T.pack (listOf (arbitrary' $ isAlphaNum ||| (== '_')))
         `suchThat` cond

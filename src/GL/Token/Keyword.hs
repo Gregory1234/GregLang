@@ -50,18 +50,18 @@ instance Lexable OtherSymbol where
 instance IsString OtherSymbol where
   fromString = toOtherSymbol . T.pack
 
-keywordType "ReservedKeyword"
+keywordType "Keyword"
   (map (\a -> (a,mapMaybe (liftA2 toMaybe isAlpha toLower) a))
     ["If","For","While","Do","Switch"
     ,"Break","Continue","Return"
     ,"Let","This","True'","False'"
     ,"Package","Import","Class"])
 
-instance Lexable ReservedKeyword where
-  consume = enumToken fromReservedKeyword
+instance Lexable Keyword where
+  consume = enumToken fromKeyword
 
-instance IsString ReservedKeyword where
-  fromString = toReservedKeyword . T.pack
+instance IsString Keyword where
+  fromString = toKeyword . T.pack
 
 keywordType "BracketType" [("Bracks","[]"),("Parens","()"),("Braces","{}")]
 
@@ -78,34 +78,30 @@ instance Lexable Bracket where
   consume =
     asum $ fmap (\x -> string (fromBracket x) $> x) (enumerate <&> enumerate)
 
-data Keyword
-  = OKeyword Operator
-  | SKeyword OtherSymbol
-  | OSKeyword (Maybe Operator)
-  | CKeyword Comparasion
-  | RKeyword ReservedKeyword
-  | BKeyword Bracket
+data Symbol
+  = OpSym Operator
+  | OtherSym OtherSymbol
+  | SetOpSym (Maybe Operator)
+  | CompOpSym Comparasion
+  | BrSym Bracket
   deriving (Eq, Ord, Show, Read)
 
-instance Lexable Keyword where
+instance Lexable Symbol where
   consume = asum
-    [ CKeyword <$> consume
-    , OSKeyword . Just <$> (consume <* string "=")
-    , OSKeyword <$> (string "=" $> Nothing)
-    , SKeyword <$> consume
-    , OKeyword <$> consume
-    , BKeyword <$> consume
-    , RKeyword <$> consume
+    [ CompOpSym <$> consume
+    , SetOpSym . Just <$> (consume <* string "=")
+    , SetOpSym <$> (string "=" $> Nothing)
+    , OpSym <$> consume
+    , BrSym <$> consume
     ]
 
-instance IsString Keyword where
+instance IsString Symbol where
   fromString = fromJust . evalLexer consume "" . T.pack
 
-fromKeyword :: Keyword -> Text
-fromKeyword (OKeyword  x       ) = fromOperator x
-fromKeyword (SKeyword  x       ) = fromOtherSymbol x
-fromKeyword (OSKeyword (Just x)) = fromOperator x <> "="
-fromKeyword (OSKeyword Nothing ) = "="
-fromKeyword (CKeyword  x       ) = fromComparasion x
-fromKeyword (RKeyword  x       ) = fromReservedKeyword x
-fromKeyword (BKeyword  x       ) = fromBracket x
+fromSymbol :: Symbol -> Text
+fromSymbol (OpSym     x       ) = fromOperator x
+fromSymbol (OtherSym  x       ) = fromOtherSymbol x
+fromSymbol (SetOpSym  (Just x)) = fromOperator x <> "="
+fromSymbol (SetOpSym  Nothing ) = "="
+fromSymbol (CompOpSym x       ) = fromComparasion x
+fromSymbol (BrSym     x       ) = fromBracket x
