@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Strict #-}
@@ -10,58 +9,21 @@
 module GL.Token
   ( module GL.Token
   , module GL.Token.Keyword
+  , module GL.Loc
   )
 where
 
 import           Control.Monad
 import           Data.Char
-import           Data.Function
 import qualified Data.List.NonEmpty            as NE
 import           Data.Proxy
 import           GL.Utils
 import qualified Text.Megaparsec               as P
-import           Text.Megaparsec                ( SourcePos(..) )
 import           Control.Lens
 import           GL.Token.Keyword
 import           GL.Lexer
+import           GL.Loc
 import qualified Data.Text                     as T
-
-updatePosString :: SourcePos -> Text -> SourcePos
-updatePosString = T.foldl $ \p -> \case
-  '\t' -> p { sourceColumn = sourceColumn p <> P.defaultTabWidth }
-  '\n' -> p { sourceLine = sourceLine p <> P.pos1, sourceColumn = P.pos1 }
-  _    -> p { sourceColumn = sourceColumn p <> P.pos1 }
-
-data LocTokenState = LocTokenState
-  { _lexerPos :: SourcePos
-  , _lexerSpellingDuring :: Text
-  , _lexerSpellingAfter :: Text
-  , _lexerData :: Text
-  , _hadBegin :: Bool
-  }
-  deriving (Show)
-
-makeLenses ''LocTokenState
-
-instance LexerState LocTokenState where
-  rest      = lexerData
-  addDuring = (lexerSpellingDuring <>~)
-  addAfter  = (lexerSpellingAfter <>~)
-  commit s@LocTokenState {..} = s
-    { _lexerPos            = updatePosString
-                               _lexerPos
-                               (_lexerSpellingDuring <> _lexerSpellingAfter)
-    , _lexerSpellingDuring = ""
-    , _lexerSpellingAfter  = ""
-    }
-
-emptyLexerState :: FilePath -> Text -> LocTokenState
-emptyLexerState fp str = LocTokenState { _lexerPos            = P.initialPos fp
-                                       , _lexerSpellingDuring = ""
-                                       , _lexerSpellingAfter  = ""
-                                       , _lexerData           = str
-                                       , _hadBegin            = False
-                                       }
 
 data Token
   = TBegin
@@ -74,6 +36,8 @@ data Token
   | TSymbol Symbol
   | TKeyword Keyword
   deriving (Eq, Ord, Show)
+
+makePrisms ''Token
 
 spellToken :: Token -> Text
 spellToken TBegin         = ""
@@ -97,12 +61,12 @@ tokenPretty (TCharLit   s) = "<char " <> showT s <> ">"
 tokenPretty (TSymbol    s) = showT (fromSymbol s)
 tokenPretty (TKeyword   s) = showT (fromKeyword s)
 
-instance Lexable LocTokenState Token where
+instance Lexable Token where
   consume = asum
-    [ (uses hadBegin not >>= guard >> hadBegin .= True) $> TBegin
+    [ (uses lexTokId (== 0) >>= guard) $> TBegin
     , do
       a <- consume
-      b <- use lexerData
+      b <- use lexRest
       guard (T.null b || not (isAlphaNum $ T.head b))
       return $ TKeyword a
     , TSymbol <$> consume
@@ -114,48 +78,15 @@ instance Lexable LocTokenState Token where
     , TTypeIdent <$> consume
     ]
 
-makePrisms ''Token
+locTokenPretty :: LocT Token -> Text
+locTokenPretty LocT {..} = tokenPretty _tokVal <> " at " <> locPretty _tokLoc
 
-data LocToken =
-  LocToken
-    { tokenVal :: Token
-    , tokenPos :: P.SourcePos
-    , tokenSpellingDuring :: Text
-    , tokenSpellingAfter :: Text
-    }
-  deriving (Eq, Ord)
-
-locTokenPretty :: LocToken -> Text
-locTokenPretty LocToken {..} =
-  tokenPretty tokenVal
-    <> " at "
-    <> T.pack (P.sourcePosPretty tokenPos)
-    <> " spelled "
-    <> showT tokenSpellingDuring
-    <> " with "
-    <> showT tokenSpellingAfter
-
-instance Show LocToken where
+instance Show (LocT Token) where
   show = T.unpack . locTokenPretty
 
-recreateToken :: LocToken -> Text
-recreateToken LocToken {..} = tokenSpellingDuring <> tokenSpellingAfter
-
-recreateToken' :: Int -> LocToken -> Text
-recreateToken' tw = replaceTabs tw . recreateToken
-
-instance Lexable LocTokenState LocToken where
-  consume = do
-    tok <- consume
-    consumeSpace
-    sp <- use lexerPos
-    sd <- use lexerSpellingDuring
-    sa <- use lexerSpellingAfter
-    return $ LocToken tok sp sd sa
-
-instance P.Stream [LocToken] where
-  type Token [LocToken] = LocToken
-  type Tokens [LocToken] = [LocToken]
+instance P.Stream [LocT Token] where
+  type Token [LocT Token] = LocT Token
+  type Tokens [LocT Token] = [LocT Token]
   tokenToChunk Proxy = pure
   tokensToChunk Proxy = id
   chunkToTokens Proxy = id
@@ -168,7 +99,7 @@ instance P.Stream [LocToken] where
              | otherwise = Just (splitAt n s)
   takeWhile_ = span
   showTokens Proxy =
-    T.unpack . T.intercalate ", " . NE.toList . fmap (tokenPretty . tokenVal)
+    T.unpack . T.intercalate ", " . NE.toList . fmap (tokenPretty . _tokVal)
   reachOffset o P.PosState {..} =
     ( T.unpack line
     , P.PosState { P.pstateInput      = rst
@@ -182,14 +113,16 @@ instance P.Stream [LocToken] where
     ofDiff     = o - pstateOffset
     (tok, rst) = splitAt ofDiff pstateInput
     epos =
-      updatePosString pstateSourcePos
+      (pstateSourcePos <++)
         .   T.concat
         $   recreateToken' (P.unPos pstateTabWidth)
+        .   _tokLoc
         <$> tok
     strs =
       T.splitOn "\n"
         .   T.concat
         $   recreateToken' (P.unPos pstateTabWidth)
+        .   _tokLoc
         <$> pstateInput
     line = strs !! min (length strs - 1) ind
     ind  = ((-) `on` P.unPos . P.sourceLine) epos pstateSourcePos

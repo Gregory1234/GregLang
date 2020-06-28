@@ -3,9 +3,11 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GL.Lexer.Monad
-  ( module GL.Lexer.Monad
+  ( module GL.Loc
+  , module GL.Lexer.Monad
   )
 where
 
@@ -16,16 +18,19 @@ import           Control.Lens
 import           GL.Utils
 import           Data.Char
 import qualified Data.Text                     as T
+import           GL.Loc
 
-class LexerState s where
-  rest :: Lens' s Text
-  addDuring :: Text -> s -> s
-  addAfter :: Text -> s -> s
-  commit :: s -> s
+data LexerState = LexerState
+    { _lexRest :: Text
+    , _lexLoc :: Loc
+    , _lexTokId :: Int
+    }
+  deriving (Eq, Show)
 
+makeLenses ''LexerState
 
-newtype LexerT s t m a
-  = LexerT { getLexerT :: s -> m ((a, [t]), s) }
+newtype LexerT t m a
+  = LexerT { getLexerT :: LexerState -> m ((a, [LocT t]), LexerState) }
     deriving
       ( Functor
       , Applicative
@@ -33,20 +38,24 @@ newtype LexerT s t m a
       , Alternative
       , MonadPlus
       , MonadFail
-      , MonadWriter [t]
-      , MonadState s
-      ) via (WriterT [t] (StateT s m))
+      , MonadWriter [LocT t]
+      , MonadState LexerState
+      ) via (WriterT [LocT t] (StateT LexerState m))
 
-type Lexer s t = LexerT s t Maybe
+type Lexer t = LexerT t Maybe
 
-runLexerS :: Lexer s t a -> s -> Maybe [t]
-runLexerS x = fmap (snd . fst) . getLexerT x
+runLexer :: Lexer t a -> FilePath -> Text -> Maybe [LocT t]
+runLexer x fp t = snd . fst <$> getLexerT x (LexerState t (emptyLoc fp) 0)
 
-evalLexerS :: Lexer s t a -> s -> Maybe a
-evalLexerS x = fmap (fst . fst) . getLexerT x
+evalLexer :: Lexer t a -> FilePath -> Text -> Maybe a
+evalLexer x fp t = fst . fst <$> getLexerT x (LexerState t (emptyLoc fp) 0)
 
-emitToken :: LexerState s => t -> Lexer s t ()
-emitToken t = tell [t] >> modify commit
+emitToken :: t -> Lexer t ()
+emitToken t = do
+  consumeSpace
+  use lexLoc >>= (\l -> tell [LocT t l])
+  lexLoc %= commit
+  lexTokId += 1
 
 data WhitespaceType = Whitespace | LineComment | BlockComment
 
@@ -66,23 +75,23 @@ spanSpace t (T.uncons -> Just (x, xs)) =
   let (w, r) = spanSpace t xs in (x `T.cons` w, r)
 spanSpace _ _ = ("", "")
 
-consumeSpace :: LexerState s => Lexer s t ()
+consumeSpace :: Lexer t ()
 consumeSpace = do
-  dat <- use rest
+  dat <- use lexRest
   let (ws, r) = spanSpace Whitespace dat
-  modify (addAfter ws)
-  rest .= r
+  lexLoc %= addAfter ws
+  lexRest .= r
 
-eof :: LexerState s => Lexer s t ()
+eof :: Lexer t ()
 eof = do
-  dat <- use rest
+  dat <- use lexRest
   guard (T.null dat)
   pure ()
 
-char :: LexerState s => Char -> Lexer s t Char
+char :: Char -> Lexer t Char
 char a = satisfy (== a)
 
-charInside :: LexerState s => Char -> Lexer s t Char
+charInside :: Char -> Lexer t Char
 charInside del = (char '\\' *> satisfyMaybe escChar)
   <|> satisfy (`notElem` ['\\', del])
  where
@@ -93,7 +102,7 @@ charInside del = (char '\\' *> satisfyMaybe escChar)
   escChar x | x == del = Just del
   escChar _            = Nothing
 
-string :: LexerState s => Text -> Lexer s t Text
+string :: Text -> Lexer t Text
 string str = scanToken (fmap (\(a, b) -> (a, a, b)) . scan str)
  where
   scan s dat = case T.uncons s of
@@ -104,29 +113,21 @@ string str = scanToken (fmap (\(a, b) -> (a, a, b)) . scan str)
       (a, b) <- scan xs ys
       return (T.cons x a, b)
 
-scanToken :: LexerState s => (Text -> Maybe (a, Text, Text)) -> Lexer s t a
+scanToken :: (Text -> Maybe (a, Text, Text)) -> Lexer t a
 scanToken scan = do
-  dat              <- use rest
+  dat              <- use lexRest
   (Just (x, y, z)) <- pure $ scan dat
-  modify (addDuring y)
-  rest .= z
+  lexLoc %= addDuring y
+  lexRest .= z
   pure x
 
-satisfy :: LexerState s => (Char -> Bool) -> Lexer s t Char
+satisfy :: (Char -> Bool) -> Lexer t Char
 satisfy f = satisfyMaybe $ \c -> toMaybe (f c) c
 
-satisfyMaybe :: LexerState s => (Char -> Maybe a) -> Lexer s t a
+satisfyMaybe :: (Char -> Maybe a) -> Lexer t a
 satisfyMaybe f = scanToken $ \t -> do
   (x, xs) <- T.uncons t
   (, T.singleton x, xs) <$> f x
 
-enumToken :: (Enum a, Bounded a, LexerState s) => (a -> Text) -> Lexer s t a
+enumToken :: (Enum a, Bounded a) => (a -> Text) -> Lexer t a
 enumToken f = asum $ fmap (\x -> string (f x) $> x) enumerate
-
-newtype EmptyState = EmptyState Text
-
-instance LexerState EmptyState where
-  rest      = coerced
-  addDuring = const id
-  addAfter  = const id
-  commit    = id

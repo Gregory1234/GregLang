@@ -14,7 +14,7 @@ main = do
   Args {..}   <- getArgs
   fileContent <- T.readFile inputFileArg
   (either putStrLn pure =<<) . runExceptT $ do
-    tok <- liftEither $ lexGregLang $ emptyLexerState inputFileArg fileContent
+    tok <- liftEither $ lexGregLang inputFileArg fileContent
     lift . T.putStrLn . T.unlines . map locTokenPretty $ tok
     ast <- liftEither $ parseGregLang inputFileArg tok
     lift . T.putStrLn . treePP $ ast

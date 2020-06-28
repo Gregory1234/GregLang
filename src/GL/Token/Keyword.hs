@@ -12,7 +12,7 @@ where
 import           Data.String
 import           Data.Char
 import           GL.Utils
-import           GL.Lexer.Lexable
+import           GL.Lexer
 import           GL.Token.TH
 import qualified Data.Text                     as T
 
@@ -22,7 +22,7 @@ keywordType "Operator"
   ,("And","&&"),("Or","||"),("XOr","^^")
   ,("BAnd","&"),("BOr","|"),("BXOr","^")]
 
-instance LexerState s => Lexable s Operator where
+instance Lexable Operator where
   consume = enumToken fromOperator
 
 instance IsString Operator where
@@ -33,7 +33,7 @@ keywordType "Comparasion"
   ,("GEq",">="),("LEq","<=")
   ,("Gt",">"),("Lt","<")]
 
-instance LexerState s => Lexable s Comparasion where
+instance Lexable Comparasion where
   consume = enumToken fromComparasion
 
 instance IsString Comparasion where
@@ -45,7 +45,7 @@ keywordType "OtherSymbol"
   ,("QMark","?"),("Colon",":")
   ,("Semicolon",";"),("Comma",","),("Dot",".")]
 
-instance LexerState s => Lexable s OtherSymbol where
+instance Lexable OtherSymbol where
   consume = enumToken fromOtherSymbol
 
 instance IsString OtherSymbol where
@@ -58,7 +58,7 @@ keywordType "Keyword"
     ,"Let","This","True'","False'"
     ,"Package","Import","Class"])
 
-instance LexerState s => Lexable s Keyword where
+instance Lexable Keyword where
   consume = enumToken fromKeyword
 
 instance IsString Keyword where
@@ -75,7 +75,7 @@ fromBracket :: Bracket -> Text
 fromBracket (b, OpenB  ) = T.singleton (fromBracketType b `T.index` 0)
 fromBracket (b, ClosedB) = T.singleton (fromBracketType b `T.index` 1)
 
-instance LexerState s => Lexable s Bracket where
+instance Lexable Bracket where
   consume =
     asum $ fmap (\x -> string (fromBracket x) $> x) (enumerate <&> enumerate)
 
@@ -87,7 +87,7 @@ data Symbol
   | BrSym Bracket
   deriving (Eq, Ord, Show, Read)
 
-instance LexerState s => Lexable s Symbol where
+instance Lexable Symbol where
   consume = asum
     [ CompOpSym <$> consume
     , SetOpSym . Just <$> (consume <* string "=")
@@ -97,7 +97,7 @@ instance LexerState s => Lexable s Symbol where
     ]
 
 instance IsString Symbol where
-  fromString = fromJust . evalLexerS consume . EmptyState . T.pack
+  fromString = fromJust . evalLexer consume "" . T.pack
 
 fromSymbol :: Symbol -> Text
 fromSymbol (OpSym     x       ) = fromOperator x

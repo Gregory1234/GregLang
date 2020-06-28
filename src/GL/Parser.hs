@@ -18,17 +18,17 @@ import           GL.Utils
 import           Control.Monad.State
 import qualified Data.Text                     as T
 
-type Parser = P.ParsecT Void [LocToken] (State Integer)
+type Parser = P.ParsecT Void [LocT Token] (State Integer)
 
 class Parsable a where
   parser :: Parser a
 
 satisfyT :: (Token -> Maybe a) -> Parser a
-satisfyT f = fromJust . f . tokenVal <$> P.satisfy (isJust . f . tokenVal)
+satisfyT f = fromJust . f . _tokVal <$> P.satisfy (isJust . f . _tokVal)
 
 exactT :: Token -> Parser ()
 exactT t =
-  P.label (T.unpack $ tokenPretty t) $ void $ P.satisfy ((== t) . tokenVal)
+  P.label (T.unpack $ tokenPretty t) $ void $ P.satisfy ((== t) . _tokVal)
 
 bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b
@@ -81,6 +81,6 @@ safeBraces = preKw "{" helper
 instance Parsable AST where
   parser = undefined
 
-parseGregLang :: FilePath -> [LocToken] -> Either String AST
+parseGregLang :: FilePath -> [LocT Token] -> Either String AST
 parseGregLang p t =
   first P.errorBundlePretty $ flip evalState 0 $ P.runParserT parser p t

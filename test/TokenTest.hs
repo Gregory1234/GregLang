@@ -69,12 +69,12 @@ instance Arbitrary Token where
     , TKeyword <$> arbitrary
     ]
 
-mkLocTokens :: String -> [(Token, Text, Text)] -> [LocToken]
+mkLocTokens :: String -> [(Token, Text, Text)] -> [LocT Token]
 mkLocTokens = helper . P.initialPos
  where
   helper _ [] = []
   helper pos ((t, d, a) : xs) =
-    LocToken t pos d a : helper (updatePosString pos (d <> a)) xs
+    LocT t (Loc pos d a) : helper (pos <++ d <> a) xs
 
 
 
