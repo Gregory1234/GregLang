@@ -4,6 +4,7 @@
 
 module GL.Parser
   ( module GL.Parser
+  , P.try
   )
 where
 
@@ -15,7 +16,6 @@ import qualified Data.Text                     as T
 import           Data.Void
 import qualified Text.Megaparsec               as P
 
-import           GL.SyntaxTree
 import           GL.Token
 import           GL.Utils
 
@@ -35,13 +35,22 @@ bracketAny :: Parser () -> Parser () -> Parser a -> Parser a
 bracketAny a b c = a *> c <* b
 
 parens :: Parser a -> Parser a
-parens = bracketAny (kw "(") (kw ")")
+parens = bracketAny (sm "(") (sm ")")
+
+instance Parsable (Maybe Operator) where
+  parser = P.label "<set operator>" $ satisfyT (^? _TSymbol . _SetOpSym)
 
 instance Parsable Ident where
   parser = P.label "<ident>" $ satisfyT (^? _TIdent)
 
 instance Parsable ClassName where
   parser = P.label "<type ident>" $ satisfyT (^? _TTypeIdent)
+
+sm :: Symbol -> Parser ()
+sm = exactT . TSymbol
+
+preSm :: Symbol -> Parser a -> Parser a
+preSm s a = sm s *> a
 
 kw :: Keyword -> Parser ()
 kw = exactT . TKeyword
@@ -54,8 +63,10 @@ optionL = P.option []
 
 maybeCommas :: Parser a -> Parser [a]
 maybeCommas a =
-  optionL ((:) <$> a <*> optionL (P.some (preKw "," a) <|> P.some a))
+  optionL ((:) <$> a <*> optionL (P.some (preSm "," a) <|> P.some a))
 
+finished :: Parser a -> Parser a
+finished = bracketAny (exactT TBegin) P.eof
 
 inc :: (MonadState a m, Num a) => m a
 inc = get <* modify (+ 1)
@@ -76,12 +87,9 @@ instance Parsable Char where
   parser = litParser "<char literal>" _TCharLit
 
 safeBraces :: Parsable a => Parser [a]
-safeBraces = preKw "{" helper
-  where helper = (kw "}" $> []) <|> ((:) <$> parser <*> helper)
+safeBraces = preSm "{" helper
+  where helper = (sm "}" $> []) <|> ((:) <$> parser <*> helper)
 
-instance Parsable AST where
-  parser = undefined
-
-parseGregLang :: FilePath -> [LocT Token] -> Either String AST
+parseGregLang :: Parsable a => FilePath -> [LocT Token] -> Either String a
 parseGregLang p t =
   first P.errorBundlePretty $ flip evalState 0 $ P.runParserT parser p t

@@ -8,6 +8,7 @@ module GL.Token.Keyword
   )
 where
 
+import           Control.Lens                   ( makePrisms )
 import           Data.Char
 import           Data.String
 import qualified Data.Text                     as T
@@ -86,6 +87,8 @@ data Symbol
   | CompOpSym Comparasion
   | BrSym Bracket
   deriving (Eq, Ord, Show, Read)
+
+makePrisms ''Symbol
 
 instance Lexable Symbol where
   consume = asum

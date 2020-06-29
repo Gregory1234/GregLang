@@ -1,4 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main
   ( module Main
   )
@@ -11,6 +13,7 @@ import qualified Data.Text.IO                  as T
 import           GL.Args
 import           GL.Lexer
 import           GL.Parser
+import           GL.SyntaxTree
 import           GL.Token
 import           GL.Utils
 
@@ -21,5 +24,5 @@ main = do
   (either putStrLn pure =<<) . runExceptT $ do
     tok <- liftEither $ lexGregLang inputFileArg fileContent
     lift . T.putStrLn . T.unlines . map locTokenPretty $ tok
-    ast <- liftEither $ parseGregLang inputFileArg tok
+    ast :: AST <- liftEither $ parseGregLang inputFileArg tok
     lift . T.putStrLn . treePP $ ast

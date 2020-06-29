@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module GL.SyntaxTree.Expr
@@ -8,6 +9,7 @@ where
 import           Data.Char
 import qualified Data.Text                     as T
 
+import           GL.Parser
 import           GL.Token.Keyword
 import           GL.Utils
 
@@ -25,7 +27,7 @@ data Expr
   | EBNot Expr
   | EIf Expr Expr Expr
   | EOf Expr Ident (Maybe [Expr])
-  deriving (Show)
+  deriving stock (Eq, Ord, Show)
 
 instance Treeable Expr where
   toTree EThis            = empTree "this"
@@ -46,3 +48,7 @@ instance Treeable Expr where
   toTree (EOf e n Nothing) = Node ("." <> getIdent n) [toTree e]
   toTree (EOf e n (Just es)) =
     Node ("." <> getIdent n <> "()") [toTree e, listToTree "args" es]
+
+
+instance Parsable Expr where
+  parser = asum [EInt <$> parser, EVar <$> parser <*> pure Nothing]

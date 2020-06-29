@@ -1,16 +1,53 @@
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module GL.SyntaxTree
-  ( module GL.SyntaxTree
-  , module GL.SyntaxTree.Expr
+  ( module GL.SyntaxTree.Stat
+  , module GL.SyntaxTree
   )
 where
 
-import           GL.SyntaxTree.Expr
+import           Control.Applicative
+import qualified Data.Text                     as T
+import           GHC.Exts
+
+import           GL.Parser
+import           GL.SyntaxTree.Stat
 import           GL.Utils
 
-data AST = AST
-  deriving (Show)
+newtype Package = Package [Ident]
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (IsList)
+
+instance Treeable Package where
+  toTree (Package path) = empTree . T.concat $ map getIdent path
+
+instance Parsable Package where
+  parser = fmap Package $ (:) <$> parser <*> many (preKw "." parser)
+
+data Decl
+  = DFun Ident [Stat]
+  deriving stock (Eq, Ord, Show)
+
+instance Treeable Decl where
+  toTree (DFun n s) = listToTree ("fun " <> getIdent n) s
+
+instance Parsable Decl where
+  parser = DFun <$> parser <*> safeBraces
+
+data AST = AST Package [Package] [Decl]
+  deriving stock (Eq, Ord, Show)
 
 instance Treeable AST where
-  toTree AST = Node "AST" []
+  toTree (AST p i d) =
+    Node "AST" [toTree p, listToTree "imports" i, listToTree "declarations" d]
+
+instance Parsable AST where
+  parser =
+    finished
+      $   AST
+      <$> preKw "package" parser
+      <*> many (preKw "import" parser)
+      <*> many parser
