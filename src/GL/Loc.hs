@@ -1,6 +1,6 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module GL.Loc
@@ -8,11 +8,12 @@ module GL.Loc
   )
 where
 
-import           GL.Utils
+import           Control.Lens
+import qualified Data.Text                     as T
 import qualified Text.Megaparsec               as P
 import           Text.Megaparsec                ( SourcePos(..) )
-import qualified Data.Text                     as T
-import           Control.Lens
+
+import           GL.Utils
 
 data Loc = Loc
     { _locPos :: P.SourcePos

@@ -1,10 +1,8 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Strict #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module GL.Token
   ( module GL.Token
@@ -13,17 +11,18 @@ module GL.Token
   )
 where
 
+import           Control.Lens
 import           Control.Monad
 import           Data.Char
 import qualified Data.List.NonEmpty            as NE
 import           Data.Proxy
-import           GL.Utils
+import qualified Data.Text                     as T
 import qualified Text.Megaparsec               as P
-import           Control.Lens
-import           GL.Token.Keyword
+
 import           GL.Lexer
 import           GL.Loc
-import qualified Data.Text                     as T
+import           GL.Token.Keyword
+import           GL.Utils
 
 data Token
   = TBegin

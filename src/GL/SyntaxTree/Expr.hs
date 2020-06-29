@@ -5,10 +5,11 @@ module GL.SyntaxTree.Expr
   )
 where
 
-import           GL.Utils
-import           GL.Token.Keyword
 import           Data.Char
 import qualified Data.Text                     as T
+
+import           GL.Token.Keyword
+import           GL.Utils
 
 data Expr
   = EVar Ident (Maybe [Expr])

@@ -1,22 +1,23 @@
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module GL.Parser
   ( module GL.Parser
   )
 where
 
-import           Data.Void
-import           GL.Token
-import           GL.SyntaxTree
-import qualified Text.Megaparsec               as P
 import           Control.Lens            hiding ( (<&>)
                                                 , op
                                                 )
-import           GL.Utils
 import           Control.Monad.State
 import qualified Data.Text                     as T
+import           Data.Void
+import qualified Text.Megaparsec               as P
+
+import           GL.SyntaxTree
+import           GL.Token
+import           GL.Utils
 
 type Parser = P.ParsecT Void [LocT Token] (State Integer)
 

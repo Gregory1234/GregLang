@@ -1,15 +1,20 @@
 {-# LANGUAGE RecordWildCards #-}
-module Main where
+module Main
+  ( module Main
+  )
+where
 
-import           GL.Args
-import           GL.Lexer
-import           GL.Token
-import           GL.Parser
-import           GL.Utils
 import           Control.Monad.Except
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T
 
+import           GL.Args
+import           GL.Lexer
+import           GL.Parser
+import           GL.Token
+import           GL.Utils
+
+main :: IO ()
 main = do
   Args {..}   <- getArgs
   fileContent <- T.readFile inputFileArg

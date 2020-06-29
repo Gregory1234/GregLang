@@ -1,9 +1,8 @@
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module GL.Lexer.Monad
   ( module GL.Loc
@@ -12,13 +11,14 @@ module GL.Lexer.Monad
 where
 
 import           Control.Applicative
+import           Control.Lens
 import           Control.Monad.State
 import           Control.Monad.Writer
-import           Control.Lens
-import           GL.Utils
 import           Data.Char
 import qualified Data.Text                     as T
+
 import           GL.Loc
+import           GL.Utils
 
 data LexerState = LexerState
     { _lexRest :: Text

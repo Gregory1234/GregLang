@@ -3,13 +3,13 @@ module TokenTest where
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import           Data.Char
+import qualified Data.Text                     as T
+import           Data.Text.Arbitrary            ( )
 import qualified Text.Megaparsec               as P
 
 import           GL.Token
 import           GL.Utils
-import           Data.Char
-import qualified Data.Text                     as T
-import           Data.Text.Arbitrary            ( )
 
 arbitrary' :: Arbitrary a => (a -> Bool) -> Gen a
 arbitrary' = suchThat arbitrary

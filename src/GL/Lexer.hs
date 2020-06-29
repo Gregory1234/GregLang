@@ -6,12 +6,13 @@ module GL.Lexer
   )
 where
 
-import           GL.Lexer.Monad
-import           Control.Monad.Except
 import           Control.Applicative
-import           GL.Utils
+import           Control.Monad.Except
 import           Data.Char
 import qualified Data.Text                     as T
+
+import           GL.Lexer.Monad
+import           GL.Utils
 
 class Lexable a where
   consume :: Lexer t a

@@ -6,9 +6,9 @@ module GL.Token.TH
   )
 where
 
-import           Language.Haskell.TH
 import           Data.Bifunctor
 import           Data.Text                      ( Text )
+import           Language.Haskell.TH
 
 keywordType :: String -> [(String, String)] -> Q [Dec]
 keywordType name' (map (first mkName) -> vals) = pure

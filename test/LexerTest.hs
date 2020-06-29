@@ -1,15 +1,15 @@
+{-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
 
 module LexerTest where
 
 import           Test.Tasty
-import           Test.Tasty.QuickCheck
 import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 
-import           GL.Token
 import           GL.Lexer
+import           GL.Token
 import           GL.Utils
 import           TokenTest
 

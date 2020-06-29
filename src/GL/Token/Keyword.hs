@@ -1,20 +1,20 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GL.Token.Keyword
   ( module GL.Token.Keyword
   )
 where
 
-import           Data.String
 import           Data.Char
-import           GL.Utils
+import           Data.String
+import qualified Data.Text                     as T
+
 import           GL.Lexer
 import           GL.Token.TH
-import qualified Data.Text                     as T
+import           GL.Utils
 
 keywordType "Operator"
   [("Add","+"),("Sub","-")

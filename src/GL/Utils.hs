@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module GL.Utils
   ( module Data.Tree
@@ -23,22 +23,21 @@ module GL.Utils
   )
 where
 
-import           Data.Tree
-import           Data.List
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
 import           Data.Bifunctor
+import           Data.Foldable
 import           Data.Function
 import           Data.Functor                   ( ($>) )
-import           Data.Maybe.HT
-import           Data.Maybe
-import           Control.Monad
-import           Control.Lens
 import           Data.Functor.Identity
-import           Data.Foldable
-import           Control.Applicative
-import           Debug.Trace
+import           Data.Maybe
+import           Data.Maybe.HT
 import           Data.String
-import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import           Data.Text                      ( Text )
+import           Data.Tree
+import           Debug.Trace
 
 
 -- | Like 'trace' but prints both the message and the value.
