@@ -54,7 +54,7 @@ instance IsString OtherSymbol where
 
 keywordType "Keyword"
   (map (\a -> (a,mapMaybe (liftA2 toMaybe isAlpha toLower) a))
-    ["If","For","While","Do","Switch"
+    ["If","Else","For","While","Do","Switch"
     ,"Break","Continue","Return"
     ,"Let","This","True'","False'"
     ,"Package","Import","Class"])
@@ -95,6 +95,7 @@ instance Lexable Symbol where
     [ CompOpSym <$> consume
     , SetOpSym . Just <$> (consume <* string "=")
     , SetOpSym <$> (string "=" $> Nothing)
+    , OtherSym <$> consume
     , OpSym <$> consume
     , BrSym <$> consume
     ]

@@ -51,4 +51,8 @@ instance Treeable Expr where
 
 
 instance Parsable Expr where
-  parser = asum [EInt <$> parser, EVar <$> parser <*> pure Nothing]
+  parser = asum
+    [ EInt <$> parser
+    , EVar <$> parser <*> pure Nothing
+    , EParens <$> parens parser
+    ]

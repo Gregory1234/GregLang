@@ -25,7 +25,7 @@ instance Treeable Package where
   toTree (Package path) = empTree . T.concat $ map getIdent path
 
 instance Parsable Package where
-  parser = fmap Package $ (:) <$> parser <*> many (preKw "." parser)
+  parser = fmap Package $ (:) <$> parser <*> many (preSm "." parser)
 
 data Decl
   = DFun Ident [Stat]
