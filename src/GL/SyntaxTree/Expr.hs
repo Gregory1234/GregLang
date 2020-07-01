@@ -23,6 +23,7 @@ data Expr
   | EThis
   | EParens Expr
   | EBinOp Expr Operator Expr
+  | EBinCm Expr Comparasion Expr
   | ENot Expr
   | EBNot Expr
   | EIf Expr Expr Expr
@@ -41,6 +42,7 @@ instance Treeable Expr where
   toTree (EBool   b     ) = toTree $ "bool " <> T.map toLower (showT b)
   toTree (EParens e     ) = listToTree "parens" [e]
   toTree (EBinOp e1 o e2) = listToTree (T.map toLower (showT o)) [e1, e2]
+  toTree (EBinCm e1 o e2) = listToTree (T.map toLower (showT o)) [e1, e2]
   toTree (ENot  e       ) = toTree $ listToTree "not" [e]
   toTree (EBNot e       ) = toTree $ listToTree "bnot" [e]
   toTree (EIf e1 e2 e3) =
@@ -53,6 +55,11 @@ instance Treeable Expr where
 instance Parsable Expr where
   parser = asum
     [ EInt <$> parser
-    , EVar <$> parser <*> pure Nothing
+    , EReal <$> parser
+    , EChar <$> parser
+    , EStr <$> parser
+    , EBool <$> parser
+    , kw "this" $> EThis
+    , EVar <$> parser <*> optional (parens (maybeCommas parser))
     , EParens <$> parens parser
     ]

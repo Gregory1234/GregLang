@@ -7,8 +7,6 @@ module GL.SyntaxTree.Stat
   )
 where
 
-import           Control.Applicative
-
 import           GL.Token.Keyword
 import           GL.Parser
 import           GL.SyntaxTree.Expr

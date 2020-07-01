@@ -5,6 +5,7 @@
 module GL.Parser
   ( module GL.Parser
   , P.try
+  , P.optional
   )
 where
 
@@ -85,6 +86,9 @@ instance Parsable Text where
 
 instance Parsable Char where
   parser = litParser "<char literal>" _TCharLit
+
+instance Parsable Bool where
+  parser = kw "true" $> True <|> kw "false" $> False
 
 safeBraces :: Parsable a => Parser [a]
 safeBraces = preSm "{" helper
