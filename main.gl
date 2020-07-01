@@ -5,4 +5,11 @@ main{
   x += 6
   x=7
   x
+  "hello"
+  'a'
+  1.2
+  true
+  false
+  this
+  hello(world 1 2 3)
 }

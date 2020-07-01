@@ -1,11 +1,15 @@
 
-.PHONY : all test repl clear
+.PHONY : all test coverage repl doc clear
 
 all:
 	stack run -j1 -- main.gl
 
 test:
 	stack test -j1
+
+coverage:
+	stack test -j1 --coverage
+	stack hpc report --all
 
 repl:
 	stack repl -j1

@@ -25,6 +25,10 @@ lexerTests =
   , testProperty "lexer puts an identifier into TIdent" $ \i ->
     lexGregLang "file" (getIdent i) === Right
       (mkLocTokens "file" [(TBegin, "", ""), (TIdent i, getIdent i, "")])
+  , testProperty "lexer puts an uppercase identifier into TTypeIdent" $ \i ->
+    lexGregLang "file" (getClassName i) === Right
+      (mkLocTokens "file" [(TBegin, "", ""), (TTypeIdent i, getClassName i, "")]
+      )
   , testCase "lexer puts an integer into TIntLit"
     $   lexGregLang "file" "123"
     @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TIntLit 123, "123", "")])
@@ -32,6 +36,22 @@ lexerTests =
     $   lexGregLang "file" "123.1"
     @?= Right
           (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 123.1, "123.1", "")])
+  , testCase "lexer puts a char into TCharLit"
+    $   lexGregLang "file" "'a'"
+    @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TCharLit 'a', "'a'", "")])
+  , testCase "lexer puts a keyword into TKeyword"
+    $   lexGregLang "file" "if"
+    @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TKeyword "if", "if", "")])
+  , testCase "lexer puts multiple separated keywords into TKeywords"
+    $   lexGregLang "file" "if else"
+    @?= Right
+          (mkLocTokens
+            "file"
+            [ (TBegin         , ""    , "")
+            , (TKeyword "if"  , "if"  , " ")
+            , (TKeyword "else", "else", "")
+            ]
+          )
   , testCase "lexer seperates whitespace from a single identifier"
     $   lexGregLang "file" " \t hello\t\t"
     @?= Right
@@ -68,13 +88,16 @@ lexerTests =
             "file"
             [(TBegin, "", ""), (TStringLit "hello world", "\"hello world\"", "")]
           )
-  , testCase "lexer supports strings with escaped quotes"
-    $   lexGregLang "file" "\"hello \\\"world\\\"\""
+  , testCase "lexer supports strings with escaped characters"
+    $   lexGregLang "file" "\"hello\\r\\n\\t \\\"world\\\"\""
     @?= Right
           (mkLocTokens
             "file"
-            [ (TBegin                      , ""                       , "")
-            , (TStringLit "hello \"world\"", "\"hello \\\"world\\\"\"", "")
+            [ (TBegin, "", "")
+            , ( TStringLit "hello\r\n\t \"world\""
+              , "\"hello\\r\\n\\t \\\"world\\\"\""
+              , ""
+              )
             ]
           )
   , testCase "lexer supports strings with escaped slashes"
@@ -106,6 +129,9 @@ lexerTests =
           )
   , testCase "lexer fails at unfinished strings"
     $   lexGregLang "file" "\"unfinished string"
+    @?= Left "Lexer error"
+  , testCase "lexer fails given bad escaped character"
+    $   lexGregLang "file" "\"\\e\""
     @?= Left "Lexer error"
   , testCase "lexer fails at weird symbols" $ lexGregLang "file" "$" @?= Left
     "Lexer error"

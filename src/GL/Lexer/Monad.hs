@@ -86,7 +86,6 @@ eof :: Lexer t ()
 eof = do
   dat <- use lexRest
   guard (T.null dat)
-  pure ()
 
 char :: Char -> Lexer t Char
 char a = satisfy (== a)
