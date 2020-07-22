@@ -68,10 +68,10 @@ instance Lexable Token where
       b <- use lexRest
       guard (T.null b || not (isAlphaNum $ T.head b))
       return $ TKeyword a
-    , TSymbol <$> consume
     , TStringLit <$> consume
     , TFloatLit <$> consume
     , TIntLit <$> consume
+    , TSymbol <$> consume
     , TCharLit <$> consume
     , TIdent <$> consume
     , TTypeIdent <$> consume

@@ -133,3 +133,9 @@ manyT v = many_v
  where
   many_v = some_v <|> pure T.empty
   some_v = liftA2 T.cons v many_v
+
+liftDefaultOne :: a -> (a -> a -> b) -> Maybe a -> Maybe a -> Maybe b
+liftDefaultOne _ f (Just a) (Just b) = Just (f a b)
+liftDefaultOne a f Nothing  (Just b) = Just (f a b)
+liftDefaultOne b f (Just a) Nothing  = Just (f a b)
+liftDefaultOne _ _ Nothing  Nothing  = Nothing

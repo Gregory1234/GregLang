@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -16,6 +17,7 @@ import           Control.Monad.State.Strict
 import           Control.Monad.Writer.Strict
 import           Data.Char
 import qualified Data.Text                     as T
+import           Data.Coerce
 
 import           GL.Loc
 import           GL.Utils
@@ -41,6 +43,12 @@ newtype LexerT t m a
       , MonadWriter [LocT t]
       , MonadState LexerState
       ) via (WriterT [LocT t] (StateT LexerState m))
+
+fromWriterState :: WriterT [LocT t] (StateT LexerState m) a -> LexerT t m a
+fromWriterState = coerce
+
+instance MonadTrans (LexerT t) where
+  lift = fromWriterState . lift . lift
 
 type Lexer t = LexerT t Maybe
 

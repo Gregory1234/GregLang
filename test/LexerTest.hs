@@ -36,6 +36,14 @@ lexerTests =
     $   lexGregLang "file" "123.1"
     @?= Right
           (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 123.1, "123.1", "")])
+  , testCase "lexer puts an float beginning with a dot into TFloatLit"
+    $   lexGregLang "file" ".123"
+    @?= Right
+          (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 0.123, ".123", "")])
+  , testCase "lexer puts an float ending with a dot into TFloatLit"
+    $   lexGregLang "file" ".123"
+    @?= Right
+          (mkLocTokens "file" [(TBegin, "", ""), (TFloatLit 0.123, ".123", "")])
   , testCase "lexer puts a char into TCharLit"
     $   lexGregLang "file" "'a'"
     @?= Right (mkLocTokens "file" [(TBegin, "", ""), (TCharLit 'a', "'a'", "")])

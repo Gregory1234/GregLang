@@ -8,6 +8,8 @@ main{
   "hello"
   'a'
   1.2
+  .2
+  2.
   true
   false
   this

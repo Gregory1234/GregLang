@@ -36,9 +36,9 @@ instance Lexable Integer where
 
 instance Lexable Double where
   consume = do
-    a <- some (satisfy (isDigit ||| (== '.')))
-    guard ('.' `elem` a)
-    pure (read a)
+    a <- optional (some (satisfy isDigit))
+    b <- char '.' *> optional (some (satisfy isDigit))
+    lift . fmap read $ liftDefaultOne "0" (\a' b' -> a' ++ '.' : b') a b
 
 lexToken :: Lexable a => Lexer a ()
 lexToken = consume >>= emitToken
