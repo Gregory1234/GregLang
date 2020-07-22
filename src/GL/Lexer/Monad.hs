@@ -12,8 +12,8 @@ where
 
 import           Control.Applicative
 import           Control.Lens
-import           Control.Monad.State
-import           Control.Monad.Writer
+import           Control.Monad.State.Strict
+import           Control.Monad.Writer.Strict
 import           Data.Char
 import qualified Data.Text                     as T
 

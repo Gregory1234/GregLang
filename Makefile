@@ -1,5 +1,5 @@
 
-.PHONY : all test coverage repl doc clear
+.PHONY : all test coverage prof repl doc clear
 
 all:
 	stack run -j1 -- main.gl
@@ -10,6 +10,10 @@ test:
 coverage:
 	stack test -j1 --coverage
 	stack hpc report --all
+
+prof:
+	stack build --profile --executable-profiling --library-profiling
+	stack exec --profile GregLangCompiler -- main.gl +RTS -p
 
 repl:
 	stack repl -j1
